@@ -4,22 +4,54 @@ import (
 	"context"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 
+	"fmt"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	gRPCHealth "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// pushService holds all the the information and functionality regarding the push implementation
-type pushService struct{}
+// PushService holds all the the information and functionality regarding the push implementation
+type PushService struct {
+	Subscriptions map[string]*amsPb.Subscription
+}
+
+// NewPushService returns a pointer to a PushService and initialises its fields
+func NewPushService() *PushService {
+	ps := new(PushService)
+	ps.Subscriptions = make(map[string]*amsPb.Subscription)
+	return ps
+}
 
 // ActivateSubscription activates a subscription so the service can start handling the push functionality
-func (ps *pushService) ActivateSubscription(ctx context.Context, sub *amsPb.ActivateSubscriptionRequest) (*amsPb.Status, error) {
-	return &amsPb.Status{}, nil
+func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.ActivateSubscriptionRequest) (*amsPb.Status, error) {
+
+	if ps.IsSubActive(r.Subscription.FullName) {
+		return &amsPb.Status{
+			Code:    uint32(codes.AlreadyExists),
+			Message: fmt.Sprintf("Subscription %v is already activated", r.Subscription.FullName),
+		}, nil
+	}
+
+	ps.Subscriptions[r.Subscription.FullName] = r.Subscription
+
+	return &amsPb.Status{
+		Code:    uint32(codes.OK),
+		Message: fmt.Sprintf("Subscription %v activated", r.Subscription.FullName),
+	}, nil
 }
 
 // DeactivateSubscription deactivates a subscription so the service can stop handling the push functionality for it
-func (ps *pushService) DeactivateSubscription(ctx context.Context, r *amsPb.DeactivateSubscriptionRequest) (*amsPb.Status, error) {
+func (ps *PushService) DeactivateSubscription(ctx context.Context, r *amsPb.DeactivateSubscriptionRequest) (*amsPb.Status, error) {
 	return &amsPb.Status{}, nil
+}
+
+// IsSubActive checks by subscription name, whether or not a subscription is already active
+func (ps *PushService) IsSubActive(name string) bool {
+
+	_, found := ps.Subscriptions[name]
+
+	return found
 }
 
 // NewGRPCServer configures and returns a new *grpc.Server
@@ -30,7 +62,7 @@ func NewGRPCServer() *grpc.Server {
 	healthService := health.NewServer()
 	healthService.SetServingStatus("api.v1.grpc.PushService", gRPCHealth.HealthCheckResponse_SERVING)
 
-	amsPb.RegisterPushServiceServer(srv, new(pushService))
+	amsPb.RegisterPushServiceServer(srv, NewPushService())
 
 	gRPCHealth.RegisterHealthServer(srv, healthService)
 

@@ -22,7 +22,6 @@ func main() {
 	if err != nil {
 		LOGGER.Fatalf("Could not listen, %v", err.Error())
 	}
-
 	srv := amsgRPC.NewGRPCServer()
 
 	err = srv.Serve(listener)
