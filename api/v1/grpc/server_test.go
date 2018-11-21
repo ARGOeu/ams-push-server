@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"testing"
 )
 
@@ -36,8 +37,7 @@ func (suite *ServerTestSuite) TestActivateSubscriptionOK() {
 
 	s, e := ps.ActivateSubscription(context.Background(), &amsPb.ActivateSubscriptionRequest{Subscription: &sub})
 
-	suite.Equal(&amsPb.Status{
-		Code:    uint32(codes.OK),
+	suite.Equal(&amsPb.ActivateSubscriptionResponse{
 		Message: "Subscription projects/p1/subscription/sub1 activated",
 	}, s)
 
@@ -53,12 +53,9 @@ func (suite *ServerTestSuite) TestActivateSubscriptionCONFLICT() {
 	sub := amsPb.Subscription{FullName: "conflict_sub"}
 	s, e := ps.ActivateSubscription(context.Background(), &amsPb.ActivateSubscriptionRequest{Subscription: &sub})
 
-	suite.Equal(&amsPb.Status{
-		Code:    uint32(codes.AlreadyExists),
-		Message: "Subscription conflict_sub is already activated",
-	}, s)
+	suite.Equal(status.Error(codes.AlreadyExists, "Subscription conflict_sub is already activated"), e)
 
-	suite.Nil(e)
+	suite.Nil(s)
 }
 
 // TestIsSubActive tests the IsSubActive method of PushService for both true and false cases
@@ -90,7 +87,7 @@ func (suite *ServerTestSuite) TestDeactivateSubscriptionRequest() {
 
 	s1, e1 := ps.DeactivateSubscription(context.Background(), &amsPb.DeactivateSubscriptionRequest{FullName: "projects/p1/subscription/sub1"})
 
-	suite.Equal(s1, &amsPb.Status{})
+	suite.Nil(s1)
 
 	suite.Nil(e1)
 }

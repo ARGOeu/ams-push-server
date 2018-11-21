@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	gRPCHealth "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 )
 
 // PushService holds all the the information and functionality regarding the push implementation
@@ -24,26 +25,22 @@ func NewPushService() *PushService {
 }
 
 // ActivateSubscription activates a subscription so the service can start handling the push functionality
-func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.ActivateSubscriptionRequest) (*amsPb.Status, error) {
+func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.ActivateSubscriptionRequest) (*amsPb.ActivateSubscriptionResponse, error) {
 
 	if ps.IsSubActive(r.Subscription.FullName) {
-		return &amsPb.Status{
-			Code:    uint32(codes.AlreadyExists),
-			Message: fmt.Sprintf("Subscription %v is already activated", r.Subscription.FullName),
-		}, nil
+		return nil, status.Errorf(codes.AlreadyExists, "Subscription %v is already activated", r.Subscription.FullName)
 	}
 
 	ps.Subscriptions[r.Subscription.FullName] = r.Subscription
 
-	return &amsPb.Status{
-		Code:    uint32(codes.OK),
+	return &amsPb.ActivateSubscriptionResponse{
 		Message: fmt.Sprintf("Subscription %v activated", r.Subscription.FullName),
 	}, nil
 }
 
 // DeactivateSubscription deactivates a subscription so the service can stop handling the push functionality for it
-func (ps *PushService) DeactivateSubscription(ctx context.Context, r *amsPb.DeactivateSubscriptionRequest) (*amsPb.Status, error) {
-	return &amsPb.Status{}, nil
+func (ps *PushService) DeactivateSubscription(ctx context.Context, r *amsPb.DeactivateSubscriptionRequest) (*amsPb.DeactivateSubscriptionResponse, error) {
+	return nil, nil
 }
 
 // IsSubActive checks by subscription name, whether or not a subscription is already active
