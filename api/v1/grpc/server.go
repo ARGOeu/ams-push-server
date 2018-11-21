@@ -55,9 +55,9 @@ func (ps *PushService) IsSubActive(name string) bool {
 }
 
 // NewGRPCServer configures and returns a new *grpc.Server
-func NewGRPCServer() *grpc.Server {
+func NewGRPCServer(opt ...grpc.ServerOption) *grpc.Server {
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(opt...)
 
 	healthService := health.NewServer()
 	healthService.SetServingStatus("api.v1.grpc.PushService", gRPCHealth.HealthCheckResponse_SERVING)
