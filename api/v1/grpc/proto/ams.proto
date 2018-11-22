@@ -10,8 +10,10 @@ service PushService {
 }
 
 // Wrapper for subscription
-message DeactivateSubscriptionResponse {}
-
+message DeactivateSubscriptionResponse {
+    // Message response
+    string message = 1;
+}
 
 // Contains which subscription to deactivate
 message DeactivateSubscriptionRequest {

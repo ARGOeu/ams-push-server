@@ -40,7 +40,17 @@ func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.Activa
 
 // DeactivateSubscription deactivates a subscription so the service can stop handling the push functionality for it
 func (ps *PushService) DeactivateSubscription(ctx context.Context, r *amsPb.DeactivateSubscriptionRequest) (*amsPb.DeactivateSubscriptionResponse, error) {
-	return nil, nil
+
+	if !ps.IsSubActive(r.FullName) {
+		return nil, status.Errorf(codes.NotFound, "Subscription %v is not active", r.FullName)
+	}
+
+	delete(ps.Subscriptions, r.FullName)
+
+	return &amsPb.DeactivateSubscriptionResponse{
+		Message: fmt.Sprintf("Subscription %v deactivated", r.FullName),
+	}, nil
+
 }
 
 // IsSubActive checks by subscription name, whether or not a subscription is already active
