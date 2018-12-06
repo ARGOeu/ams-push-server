@@ -7,6 +7,21 @@ service PushService {
 
     //  Deactivates a subscription in order for the service to stop handling the push functionality
     rpc DeactivateSubscription(DeactivateSubscriptionRequest) returns (DeactivateSubscriptionResponse) {}
+
+    // Returns the detailed information about an active subscription
+    rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
+}
+
+// Wrapper for subscription.
+message GetSubscriptionResponse {
+    // Required. A subscription.
+    Subscription subscription = 1;
+}
+
+// Contains the name of the subscription we want to retrieve
+message GetSubscriptionRequest {
+    // Required. The full resource name of the subscrption.
+    string full_name = 1;
 }
 
 // Wrapper for subscription

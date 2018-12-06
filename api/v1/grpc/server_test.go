@@ -70,6 +70,47 @@ func (suite *ServerTestSuite) TestActivateSubscriptionCONFLICT() {
 	suite.Nil(s)
 }
 
+// TestGetSubscriptionNOTFOUND tests the case where the given sub name doesn't correspond to any active subscription
+func (suite *ServerTestSuite) TestGetSubscriptionNOTFOUND() {
+
+	ps := NewPushService()
+
+	s, e := ps.GetSubscription(context.Background(), &amsPb.GetSubscriptionRequest{FullName: "sub1"})
+
+	suite.Equal(status.Error(codes.NotFound, "Subscription sub1 is not active"), e)
+
+	suite.Nil(s)
+}
+
+// TestGetSubscription tests the normal case where a subscription is found and retrieved
+func (suite *ServerTestSuite) TestGetSubscription() {
+
+	ps := NewPushService()
+
+	retry := &amsPb.RetryPolicy{
+		Type:   "linear",
+		Period: 30,
+	}
+
+	pCfg := &amsPb.PushConfig{
+		PushEndpoint: "https://127.0.0.1:5000/receive_here",
+		RetryPolicy:  retry,
+	}
+
+	sub := &amsPb.Subscription{
+		FullName:   "projects/p1/subscription/sub1",
+		FullTopic:  "projects/p1/topics/topic1",
+		PushConfig: pCfg,
+	}
+
+	ps.Subscriptions["projects/p1/subscription/sub1"] = sub
+
+	s, e := ps.GetSubscription(context.Background(), &amsPb.GetSubscriptionRequest{FullName: "projects/p1/subscription/sub1"})
+
+	suite.Equal(&amsPb.GetSubscriptionResponse{Subscription: sub}, s)
+	suite.Nil(e)
+}
+
 // TestIsSubActive tests the IsSubActive method of PushService for both true and false cases
 func (suite *ServerTestSuite) TestIsSubActive() {
 

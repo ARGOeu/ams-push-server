@@ -47,6 +47,18 @@ func (ps *PushService) DeactivateSubscription(ctx context.Context, r *amsPb.Deac
 	return nil, nil
 }
 
+// GetSubscription finds and returns a subscription
+func (ps *PushService) GetSubscription(ctx context.Context, r *amsPb.GetSubscriptionRequest) (*amsPb.GetSubscriptionResponse, error) {
+
+	if !ps.IsSubActive(r.FullName) {
+		return nil, status.Errorf(codes.NotFound, "Subscription %v is not active", r.FullName)
+	}
+
+	return &amsPb.GetSubscriptionResponse{
+		Subscription: ps.Subscriptions[r.FullName],
+	}, nil
+}
+
 // IsSubActive checks by subscription name, whether or not a subscription is already active
 func (ps *PushService) IsSubActive(name string) bool {
 
