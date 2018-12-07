@@ -111,6 +111,33 @@ func (suite *ServerTestSuite) TestGetSubscription() {
 	suite.Nil(e)
 }
 
+// TestListSubscriptions tests the functionality that retrieves all active subscriptions
+func (suite *ServerTestSuite) TestListSubscriptions() {
+
+	ps := NewPushService()
+
+	s, e := ps.ListSubscriptions(context.Background(), &amsPb.ListSubscriptionsRequest{})
+	suite.Equal(0, len(s.Subscriptions))
+	suite.Nil(e)
+
+	ps.Subscriptions["projects/p1/subscription/sub1"] = &amsPb.Subscription{}
+	ps.Subscriptions["projects/p1/subscription/sub2"] = &amsPb.Subscription{}
+	ps.Subscriptions["projects/p1/subscription/sub3"] = &amsPb.Subscription{}
+	ps.Subscriptions["projects/p1/subscription/sub4"] = &amsPb.Subscription{}
+
+	s2, e2 := ps.ListSubscriptions(context.Background(), &amsPb.ListSubscriptionsRequest{})
+
+	suite.Equal([]string{
+		"projects/p1/subscription/sub1",
+		"projects/p1/subscription/sub2",
+		"projects/p1/subscription/sub3",
+		"projects/p1/subscription/sub4",
+	}, s2.Subscriptions)
+
+	suite.Nil(e2)
+
+}
+
 // TestIsSubActive tests the IsSubActive method of PushService for both true and false cases
 func (suite *ServerTestSuite) TestIsSubActive() {
 

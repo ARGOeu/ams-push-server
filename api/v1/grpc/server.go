@@ -59,6 +59,22 @@ func (ps *PushService) GetSubscription(ctx context.Context, r *amsPb.GetSubscrip
 	}, nil
 }
 
+// ListSubscriptions returns the names of all currently active subscriptions
+func (ps *PushService) ListSubscriptions(ctx context.Context, r *amsPb.ListSubscriptionsRequest) (*amsPb.ListSubscriptionsResponse, error) {
+
+	subNames := []string{}
+	//i := 0
+	for key := range ps.Subscriptions {
+		subNames = append(subNames, key)
+		//subNames[i] = key
+		//i++
+	}
+
+	return &amsPb.ListSubscriptionsResponse{
+		Subscriptions: subNames,
+	}, nil
+}
+
 // IsSubActive checks by subscription name, whether or not a subscription is already active
 func (ps *PushService) IsSubActive(name string) bool {
 

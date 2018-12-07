@@ -10,7 +10,18 @@ service PushService {
 
     // Returns the detailed information about an active subscription
     rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
+
+    // Returns a list cointaining the full names of all active subscriptions
+    rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse) {}
 }
+
+// ListSubscriptionsResponse holds a list containing all active subscriptions' names
+message ListSubscriptionsResponse {
+    repeated string subscriptions = 1;
+}
+
+// ListSubscriptionsRequest is an empty struct
+message ListSubscriptionsRequest {}
 
 // Wrapper for subscription.
 message GetSubscriptionResponse {
