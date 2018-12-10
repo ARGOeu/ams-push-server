@@ -95,13 +95,28 @@ func (suite *ServerTestSuite) TestNewPushService() {
 
 func (suite *ServerTestSuite) TestDeactivateSubscriptionRequest() {
 
-	ps := new(PushService)
+	ps := NewPushService()
 
-	s1, e1 := ps.DeactivateSubscription(context.Background(), &amsPb.DeactivateSubscriptionRequest{FullName: "projects/p1/subscription/sub1"})
+	ps.Subscriptions["sub1"] = &amsPb.Subscription{}
 
-	suite.Nil(s1)
+	s, e := ps.DeactivateSubscription(context.Background(), &amsPb.DeactivateSubscriptionRequest{FullName: "sub1"})
 
-	suite.Nil(e1)
+	_, ok := ps.Subscriptions["sub1"]
+	suite.Equal(&amsPb.DeactivateSubscriptionResponse{Message: "Subscription sub1 deactivated"}, s)
+
+	suite.False(ok)
+	suite.Nil(e)
+}
+
+// TestDeactivateSubscriptionRequestNOTFOUND tests the case where the subscription is not yet activated
+func (suite *ServerTestSuite) TestDeactivateSubscriptionRequestNOTFOUND() {
+
+	ps := NewPushService()
+
+	s, e := ps.DeactivateSubscription(context.Background(), &amsPb.DeactivateSubscriptionRequest{FullName: "not_found"})
+
+	suite.Equal(status.Error(codes.NotFound, "Subscription not_found is not active"), e)
+	suite.Nil(s)
 }
 
 func (suite *ServerTestSuite) TestNewGRPCServer() {
