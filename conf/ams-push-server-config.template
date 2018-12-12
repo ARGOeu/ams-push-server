@@ -1,0 +1,11 @@
+{
+  "service_port": 9000,
+  "certificate": "/path/cert.pem",
+  "certificate_key": "/path/certkey.pem",
+  "certificate_authorities_dir": "/path/to/cas",
+  "ams_token": "sometoken",
+  "ams_host": "localhost",
+  "ams_port": 8080,
+  "verify_ssl": true,
+  "trust_unknown_cas": false
+}
