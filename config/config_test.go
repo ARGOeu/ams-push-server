@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"github.com/stretchr/testify/suite"
 	"strings"
 	"testing"
@@ -28,6 +29,7 @@ func (suite *ConfigTestSuite) TestValidateRequired() {
 		AmsHost:                   "example.come",
 		AmsPort:                   8080,
 		VerifySSL:                 false,
+		TLSEnabled:                true,
 		TrustUnknownCAs:           false,
 	}
 
@@ -48,6 +50,7 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
   "ams_host": "localhost",
   "ams_port": 8080,
   "verify_ssl": true,
+  "tls_enabled": false,
   "trust_unknown_cas": true
 }
 `
@@ -63,6 +66,7 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 	suite.Equal("localhost", cfg.AmsHost)
 	suite.Equal(8080, cfg.AmsPort)
 	suite.Equal(true, cfg.VerifySSL)
+	suite.Equal(false, cfg.TLSEnabled)
 	suite.Equal(true, cfg.TrustUnknownCAs)
 
 	suite.Nil(e1)
@@ -85,6 +89,18 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 
 	// test the case where the input is a malformed json
 	suite.Equal("unexpected EOF", e2.Error())
+}
+
+func (suite *ConfigTestSuite) TestGetClientAuthType() {
+
+	cfg1 := new(Config)
+	cfg1.TrustUnknownCAs = true
+
+	cfg2 := new(Config)
+	cfg2.TrustUnknownCAs = false
+
+	suite.Equal(tls.RequireAnyClientCert, cfg1.GetClientAuthType())
+	suite.Equal(tls.RequireAndVerifyClientCert, cfg2.GetClientAuthType())
 }
 
 func TestConfigTestSuite(t *testing.T) {

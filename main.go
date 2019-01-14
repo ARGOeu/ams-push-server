@@ -16,7 +16,7 @@ import (
 func init() {
 
 	fmter := &log.TextFormatter{FullTimestamp: true, DisableColors: true}
-	hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+	hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_DEBUG, "")
 
 	log.SetFormatter(fmter)
 
