@@ -8,5 +8,6 @@
   "ams_port": 8080,
   "verify_ssl": true,
   "tls_enabled": true,
-  "trust_unknown_cas": false
+  "trust_unknown_cas": false,
+  "log_level": "INFO"
 }

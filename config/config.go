@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 )
 
 // Config contains all the needed information for the server to function properly
@@ -35,13 +36,35 @@ type Config struct {
 	TLSEnabled bool `json:"tls_enabled"`
 	// Trust incoming certificates signed from unknown CAs
 	TrustUnknownCAs bool `json:"trust_unknown_cas"`
+	// log level(DEBUG,INFO,WARNING,ERROR)
+	LogLevel string `json:"log_level" required:"true"`
 	// tls configuration to be used by the grpc server
 	tlsConfig *tls.Config
+}
+
+var logLevels = map[string]log.Level{
+	"DEBUG":   log.DebugLevel,
+	"INFO":    log.InfoLevel,
+	"WARNING": log.WarnLevel,
+	"ERROR":   log.ErrorLevel,
 }
 
 // GetTLSConfig returns the tls configuration needed for the grpc server
 func (cfg *Config) GetTLSConfig() *tls.Config {
 	return cfg.tlsConfig
+}
+
+// GetLogLevel maps the provided string log level inside the config to a log.Level
+// if it can't map it, it will return log.LevelInfo
+func (cfg *Config) GetLogLevel() log.Level {
+
+	logLevel, ok := logLevels[strings.ToUpper(cfg.LogLevel)]
+
+	if !ok {
+		return log.InfoLevel
+	}
+
+	return logLevel
 }
 
 // LoadFromJson fills the config struct with the contents of the reader
@@ -59,6 +82,12 @@ func (cfg *Config) LoadFromJson(from io.Reader) error {
 		return err
 	}
 
+	// check if the given log value is correct
+	_, ok := logLevels[strings.ToUpper(cfg.LogLevel)]
+	if !ok {
+		return errors.Errorf("Invalid log level %v", cfg.LogLevel)
+	}
+
 	// print values
 	rvc := reflect.ValueOf(*cfg)
 
@@ -71,7 +100,18 @@ func (cfg *Config) LoadFromJson(from io.Reader) error {
 			continue
 		}
 
-		log.Infof("Config Field: %v has been successfully initialized with value: %v", fl.Name, rvc.Field(i).Interface())
+		// skip non configuration fields
+		if fl.Tag.Get("json") == "" {
+			continue
+		}
+
+		log.WithFields(
+			log.Fields{
+				"type":  "service_log",
+				"field": fl.Tag.Get("json"),
+				"value": rvc.Field(i).Interface(),
+			},
+		).Info("Configuration field has been successfully initialized")
 
 	}
 
@@ -165,12 +205,24 @@ func (cfg *Config) GetClientAuthType() tls.ClientAuthType {
 // loadCAs walks the specified CertificateAuthoritiesDir and uses each .pem file to build the trusted CA pool
 func (cfg *Config) loadCAs() *x509.CertPool {
 
-	log.Info("Building the root CA chain...")
+	log.WithFields(
+		log.Fields{
+			"type": "service_log",
+			"path": cfg.CertificateAuthoritiesDir,
+		},
+	).Info("Trying to load CAs")
+
 	pattern := "*.pem"
 	roots := x509.NewCertPool()
 	err := filepath.Walk(cfg.CertificateAuthoritiesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			log.Errorf("Prevent panic by handling failure accessing a path %q: %v\n", cfg.CertificateAuthoritiesDir, err)
+			log.WithFields(
+				log.Fields{
+					"type":  "error_log",
+					"path":  path,
+					"error": err.Error(),
+				},
+			).Error("Prevent panic by handling failure accessing a path")
 			return err
 		}
 		if ok, _ := filepath.Match(pattern, info.Name()); ok {
@@ -186,9 +238,20 @@ func (cfg *Config) loadCAs() *x509.CertPool {
 	})
 
 	if err != nil {
-		log.Errorf("error walking the path %q: %v\n", cfg.CertificateAuthoritiesDir, err)
+		log.WithFields(
+			log.Fields{
+				"type":  "error_log",
+				"path":  cfg.CertificateAuthoritiesDir,
+				"error": err.Error(),
+			},
+		).Error("Could not walk down the path")
 	} else {
-		log.Info("All certificates parsed successfully.")
+		log.WithFields(
+			log.Fields{
+				"type": "service_log",
+			},
+		).Info("All CAs parsed and loaded successfully")
 	}
+
 	return roots
 }

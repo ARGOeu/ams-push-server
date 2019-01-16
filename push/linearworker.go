@@ -6,7 +6,6 @@ import (
 	"github.com/ARGOeu/ams-push-server/senders"
 	"time"
 
-	"fmt"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	log "github.com/sirupsen/logrus"
 )
@@ -81,8 +80,12 @@ func (w *LinearWorker) push() error {
 	}
 
 	if rml.IsEmpty() {
-		m := fmt.Sprintf("No new messages from: %v", w.consumer.ResourceInfo())
-		log.Debug(m)
+		log.WithFields(
+			log.Fields{
+				"type":     "service_log",
+				"resource": w.consumer.ResourceInfo(),
+			},
+		).Debug("No new messages")
 		return nil
 	}
 

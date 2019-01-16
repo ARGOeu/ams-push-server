@@ -105,7 +105,12 @@ func (ahc *AmsHttpConsumer) Consume(ctx context.Context) (ReceivedMessagesList, 
 	}
 
 	req.Header.Set("Content-Type", ApplicationJson)
-	log.Debugf("Trying to pull messages for %v", ahc.ResourceInfo())
+	log.WithFields(
+		log.Fields{
+			"type":     "service_log",
+			"resource": ahc.ResourceInfo(),
+		},
+	).Debug("Trying to consume message")
 
 	t1 := time.Now()
 
@@ -119,6 +124,13 @@ func (ahc *AmsHttpConsumer) Consume(ctx context.Context) (ReceivedMessagesList, 
 	if resp.StatusCode != http.StatusOK {
 		buf := bytes.Buffer{}
 		buf.ReadFrom(resp.Body)
+		log.WithFields(
+			log.Fields{
+				"type":     "service_log",
+				"resource": ahc.ResourceInfo(),
+				"error":    buf.String(),
+			},
+		).Error("Could not consume message")
 		err = errors.New(fmt.Sprintf("an error occurred while trying to consume messages from %v, %v", ahc.ResourceInfo(), buf.String()))
 		return ReceivedMessagesList{}, err
 	}
@@ -129,7 +141,14 @@ func (ahc *AmsHttpConsumer) Consume(ctx context.Context) (ReceivedMessagesList, 
 		return reqList, err
 	}
 
-	log.Debugf("Messages %+v from %v consumed in: %v", reqList, ahc.ResourceInfo(), time.Since(t1).String())
+	log.WithFields(
+		log.Fields{
+			"type":            "performance_log",
+			"message":         reqList,
+			"resource":        ahc.ResourceInfo(),
+			"processing_time": time.Since(t1).String(),
+		},
+	).Debug("Message consumed")
 
 	return reqList, nil
 }
@@ -166,10 +185,26 @@ func (ahc *AmsHttpConsumer) Ack(ctx context.Context, ackId string) error {
 		buf := bytes.Buffer{}
 		buf.ReadFrom(resp.Body)
 		err = errors.New(fmt.Sprintf("an error occurred while trying to acknowledge message with ackId %v from %v, %v", ackId, ahc.ResourceInfo(), buf.String()))
+		log.WithFields(
+			log.Fields{
+				"type":     "service_log",
+				"ackId":    ackId,
+				"resource": ahc.ResourceInfo(),
+				"error":    buf.String(),
+			},
+		).Error("Could not acknowledge message")
+		err = errors.New(fmt.Sprintf("an error occurred while trying to acknowledge message with ackId %v from %v, %v", ackId, ahc.ResourceInfo(), buf.String()))
 		return err
 	}
 
-	log.Debugf("Message with ackId %v for %v got acknowledged in %v", ackId, ahc.ResourceInfo(), time.Since(t1).String())
+	log.WithFields(
+		log.Fields{
+			"type":            "performance",
+			"ackId":           ackId,
+			"resource":        ahc.ResourceInfo(),
+			"processing_time": time.Since(t1).String(),
+		},
+	).Debug("Message acknowledged")
 
 	return nil
 }

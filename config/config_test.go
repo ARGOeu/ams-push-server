@@ -2,7 +2,9 @@ package config
 
 import (
 	"crypto/tls"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
+	"io/ioutil"
 	"strings"
 	"testing"
 )
@@ -31,6 +33,7 @@ func (suite *ConfigTestSuite) TestValidateRequired() {
 		VerifySSL:                 false,
 		TLSEnabled:                true,
 		TrustUnknownCAs:           false,
+		LogLevel:                  "INFO",
 	}
 
 	// test the case where where everything is set properly
@@ -51,7 +54,8 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
   "ams_port": 8080,
   "verify_ssl": true,
   "tls_enabled": false,
-  "trust_unknown_cas": true
+  "trust_unknown_cas": true,
+  "log_level": "INFO"
 }
 `
 	cfg := new(Config)
@@ -68,6 +72,7 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 	suite.Equal(true, cfg.VerifySSL)
 	suite.Equal(false, cfg.TLSEnabled)
 	suite.Equal(true, cfg.TrustUnknownCAs)
+	suite.Equal("INFO", cfg.LogLevel)
 
 	suite.Nil(e1)
 
@@ -89,6 +94,55 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 
 	// test the case where the input is a malformed json
 	suite.Equal("unexpected EOF", e2.Error())
+
+	testCfg3 := `
+{
+  "service_port": 9000,
+  "certificate": "/path/cert.pem",
+  "certificate_key": "/path/certkey.pem",
+  "certificate_authorities_dir": "/path/to/cas",
+  "ams_token": "sometoken",
+  "ams_host": "localhost",
+  "ams_port": 8080,
+  "verify_ssl": true,
+  "tls_enabled": false,
+  "trust_unknown_cas": true,
+  "log_level": "unknown"
+}
+`
+
+	cfg3 := new(Config)
+	e3 := cfg3.LoadFromJson(strings.NewReader(testCfg3))
+	// test the case where the log level is not one of the four wanted values
+	suite.Equal("Invalid log level unknown", e3.Error())
+}
+
+func (suite *ConfigTestSuite) TestGetLogLevel() {
+
+	cfg1 := new(Config)
+	cfg1.LogLevel = "DEBUG"
+
+	suite.Equal(log.DebugLevel, cfg1.GetLogLevel())
+
+	cfg2 := new(Config)
+	cfg2.LogLevel = "INFO"
+
+	suite.Equal(log.InfoLevel, cfg2.GetLogLevel())
+
+	cfg3 := new(Config)
+	cfg3.LogLevel = "WARNING"
+
+	suite.Equal(log.WarnLevel, cfg3.GetLogLevel())
+
+	cfg4 := new(Config)
+	cfg4.LogLevel = "ERROR"
+
+	suite.Equal(log.ErrorLevel, cfg4.GetLogLevel())
+
+	cfg5 := new(Config)
+	cfg5.LogLevel = "unknown"
+
+	suite.Equal(log.InfoLevel, cfg5.GetLogLevel())
 }
 
 func (suite *ConfigTestSuite) TestGetClientAuthType() {
@@ -104,5 +158,6 @@ func (suite *ConfigTestSuite) TestGetClientAuthType() {
 }
 
 func TestConfigTestSuite(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	suite.Run(t, new(ConfigTestSuite))
 }
