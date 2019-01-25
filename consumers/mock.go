@@ -19,6 +19,27 @@ type MockConsumer struct {
 	AckStatus         string
 }
 
+func (m *MockConsumer) ToCancelableError(error error) (CancelableError, bool) {
+
+	// check if the errMsg can be marshaled to an ams http error
+	ahe := new(AmsHttpError)
+	err := json.Unmarshal([]byte(error.Error()), ahe)
+	if err != nil {
+		return CancelableError{}, false
+	}
+
+	// check if the error is produced from a project or subscription that doesn't exist
+	if ahe.Error.Message == ProjectNotFound {
+		return NewCancelableError(ProjectNotFound, m.SubStatus), true
+	}
+
+	if ahe.Error.Message == SubscriptionNotFound {
+		return NewCancelableError(SubscriptionNotFound, m.SubStatus), true
+	}
+
+	return CancelableError{}, false
+}
+
 func (m *MockConsumer) Consume(ctx context.Context) (ReceivedMessagesList, error) {
 
 	switch m.SubStatus {
@@ -49,6 +70,27 @@ func (m *MockConsumer) Consume(ctx context.Context) (ReceivedMessagesList, error
 	case "error_sub":
 
 		return ReceivedMessagesList{}, errors.New("error while consuming")
+
+	case "error_sub_no_project":
+		err := `{
+		 "error": {
+			"code": 404,
+			"message": "project doesn't exist",
+			"status": "NOT_FOUND"
+		 }
+		}`
+		return ReceivedMessagesList{}, errors.New(err)
+
+	case "error_sub_no_sub":
+		err := `{
+		 "error": {
+			"code": 404,
+			"message": "Subscription doesn't exist",
+			"status": "NOT_FOUND"
+		 }
+		}`
+		return ReceivedMessagesList{}, errors.New(err)
+
 	}
 
 	return ReceivedMessagesList{}, nil
@@ -128,15 +170,52 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 
 	case "/v1/error_sub:pull":
 
-		err := `
-		"error": {
+		err := `{
+		 "error": {
 			"code": 500,
 			"message": "Internal error",
 			"status": "INTERNAL_ERROR"
+		 }
 		}`
 
 		resp = &http.Response{
 			StatusCode: 500,
+			// Send response to be tested
+			Body: ioutil.NopCloser(strings.NewReader(err)),
+			// Must be set to non-nil value or it panics
+			Header: header,
+		}
+
+	case "/v1/error_sub_no_project:pull":
+
+		err := `{
+		 "error": {
+			"code": 404,
+			"message": "project doesn't exist",
+			"status": "NOT_FOUND"
+		 }
+		}`
+
+		resp = &http.Response{
+			StatusCode: 404,
+			// Send response to be tested
+			Body: ioutil.NopCloser(strings.NewReader(err)),
+			// Must be set to non-nil value or it panics
+			Header: header,
+		}
+
+	case "/v1/error_sub_no_sub:pull":
+
+		err := `{
+		 "error": {
+			"code": 404,
+			"message": "Subscription doesn't exist",
+			"status": "NOT_FOUND"
+		 } 
+		}`
+
+		resp = &http.Response{
+			StatusCode: 404,
 			// Send response to be tested
 			Body: ioutil.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
@@ -155,11 +234,12 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 
 	case "/v1/timeout_sub:acknowledge":
 
-		err := `
-		"error": {
+		err := `{
+		 "error": {
 			"code": 408,
 			"message": "ack timeout",
 			"status": "TIMEOUT"
+		 }
 		}`
 
 		resp = &http.Response{

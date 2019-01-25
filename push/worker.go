@@ -7,6 +7,11 @@ import (
 	"github.com/ARGOeu/ams-push-server/senders"
 )
 
+type PushError struct {
+	ErrMsg  string
+	SubName string
+}
+
 // Worker encapsulates the flow of consuming, sending and acknowledging
 type Worker interface {
 	// Start starts the the push functionality based on the type of the worker
@@ -18,11 +23,11 @@ type Worker interface {
 }
 
 // New acts as a worker factory, creates and returns a new worker based on the provided type
-func New(sub *amsPb.Subscription, c consumers.Consumer, s senders.Sender) (Worker, error) {
+func New(sub *amsPb.Subscription, c consumers.Consumer, s senders.Sender, ch chan<- consumers.CancelableError) (Worker, error) {
 
 	switch sub.PushConfig.RetryPolicy.Type {
 	case "linear":
-		return NewLinearWorker(sub, c, s), nil
+		return NewLinearWorker(sub, c, s, ch), nil
 	}
 
 	return nil, fmt.Errorf("worker %v not yet implemented", sub.PushConfig.RetryPolicy.Type)

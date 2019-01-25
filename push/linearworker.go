@@ -12,15 +12,16 @@ import (
 
 // LinearWorker implements a worker that follows a linear strategy when trying to push
 type LinearWorker struct {
-	sub      *amsPb.Subscription
-	consumer consumers.Consumer
-	sender   senders.Sender
-	cancel   context.CancelFunc
-	ctx      context.Context
+	sub              *amsPb.Subscription
+	consumer         consumers.Consumer
+	sender           senders.Sender
+	cancel           context.CancelFunc
+	ctx              context.Context
+	deactivationChan chan<- consumers.CancelableError
 }
 
 // NewLinearWorker initialises and configures a new linear worker
-func NewLinearWorker(sub *amsPb.Subscription, c consumers.Consumer, s senders.Sender) *LinearWorker {
+func NewLinearWorker(sub *amsPb.Subscription, c consumers.Consumer, s senders.Sender, ch chan<- consumers.CancelableError) *LinearWorker {
 	lw := new(LinearWorker)
 
 	parentCtx := context.TODO()
@@ -31,6 +32,7 @@ func NewLinearWorker(sub *amsPb.Subscription, c consumers.Consumer, s senders.Se
 	lw.sender = s
 	lw.ctx = ctx
 	lw.cancel = cancel
+	lw.deactivationChan = ch
 
 	return lw
 }
@@ -50,14 +52,8 @@ Loop:
 	for {
 		select {
 		case <-timer.C:
-
-			err := w.push()
-			if err != nil {
-				log.Error(err.Error())
-			}
-
+			w.push()
 		case <-w.ctx.Done():
-
 			canceled := timer.Stop()
 
 			if !canceled {
@@ -72,21 +68,35 @@ Loop:
 }
 
 // push executes the push cycle of consume -> send -> ack
-func (w *LinearWorker) push() error {
+func (w *LinearWorker) push() {
 
 	rml, err := w.consumer.Consume(w.ctx)
 	if err != nil {
-		return err
-	}
 
-	if rml.IsEmpty() {
+		ce, ok := w.consumer.ToCancelableError(err)
+		if ok {
+			w.deactivationChan <- ce
+			return
+		}
+
+		if err.Error() == "no new messages" {
+			log.WithFields(
+				log.Fields{
+					"type":     "service_log",
+					"resource": w.consumer.ResourceInfo(),
+				},
+			).Debug("No new messages")
+			return
+		}
+
 		log.WithFields(
 			log.Fields{
 				"type":     "service_log",
 				"resource": w.consumer.ResourceInfo(),
+				"error":    err.Error(),
 			},
-		).Debug("No new messages")
-		return nil
+		).Error("Could not consume message")
+		return
 	}
 
 	pm := senders.PushMsg{
@@ -96,15 +106,14 @@ func (w *LinearWorker) push() error {
 
 	err = w.sender.Send(w.ctx, pm)
 	if err != nil {
-		return err
+		return
 	}
 
 	err = w.consumer.Ack(w.ctx, rml.RecMsgs[0].AckID)
 	if err != nil {
-		return err
+		return
 	}
 
-	return nil
 }
 
 // Stop stops the push worker's functionality

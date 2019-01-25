@@ -10,7 +10,8 @@ import (
 )
 
 type MockSender struct {
-	SendStatus string
+	SendStatus   string
+	PushMessages []PushMsg
 }
 
 func (s *MockSender) Send(ctx context.Context, msg PushMsg) error {
@@ -20,6 +21,8 @@ func (s *MockSender) Send(ctx context.Context, msg PushMsg) error {
 	case "error_send":
 		return errors.New("error while sending")
 	}
+
+	s.PushMessages = append(s.PushMessages, msg)
 
 	return nil
 }

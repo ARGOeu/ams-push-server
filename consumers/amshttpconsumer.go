@@ -11,7 +11,11 @@ import (
 	"time"
 )
 
-const ApplicationJson = "application/json"
+const (
+	ApplicationJson      = "application/json"
+	ProjectNotFound      = "project doesn't exist"
+	SubscriptionNotFound = "Subscription doesn't exist"
+)
 
 // Attributes is key/value pairs of extra data
 type Attributes map[string]string
@@ -69,6 +73,18 @@ type AmsHttpConsumer struct {
 	token    string
 }
 
+// AmsHttpError represents the layout of an ams http api error
+type AmsHttpError struct {
+	Error amsErr `json:"error"`
+}
+
+// amsErr represents the "model" of an ams http api error
+type amsErr struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Status  string `json:"status"`
+}
+
 // NewAmsHttpConsumer initialises and returns a new ams http consumer
 func NewAmsHttpConsumer(endpoint, fullSub, token string, client *http.Client) *AmsHttpConsumer {
 	ahc := new(AmsHttpConsumer)
@@ -77,6 +93,27 @@ func NewAmsHttpConsumer(endpoint, fullSub, token string, client *http.Client) *A
 	ahc.fullSub = fullSub
 	ahc.token = token
 	return ahc
+}
+
+func (ahc *AmsHttpConsumer) ToCancelableError(error error) (CancelableError, bool) {
+
+	// check if the errMsg can be marshaled to an ams http error
+	ahe := new(AmsHttpError)
+	err := json.Unmarshal([]byte(error.Error()), ahe)
+	if err != nil {
+		return CancelableError{}, false
+	}
+
+	// check if the error is produced from a project or subscription that doesn't exist
+	if ahe.Error.Message == ProjectNotFound {
+		return NewCancelableError(ProjectNotFound, ahc.fullSub), true
+	}
+
+	if ahe.Error.Message == SubscriptionNotFound {
+		return NewCancelableError(SubscriptionNotFound, ahc.fullSub), true
+	}
+
+	return CancelableError{}, false
 }
 
 // ResourceInfo returns the ams subscription and the ams host it is on
@@ -124,21 +161,17 @@ func (ahc *AmsHttpConsumer) Consume(ctx context.Context) (ReceivedMessagesList, 
 	if resp.StatusCode != http.StatusOK {
 		buf := bytes.Buffer{}
 		buf.ReadFrom(resp.Body)
-		log.WithFields(
-			log.Fields{
-				"type":     "service_log",
-				"resource": ahc.ResourceInfo(),
-				"error":    buf.String(),
-			},
-		).Error("Could not consume message")
-		err = errors.New(fmt.Sprintf("an error occurred while trying to consume messages from %v, %v", ahc.ResourceInfo(), buf.String()))
-		return ReceivedMessagesList{}, err
+		return ReceivedMessagesList{}, errors.New(buf.String())
 	}
 
 	reqList := ReceivedMessagesList{}
 	err = json.NewDecoder(resp.Body).Decode(&reqList)
 	if err != nil {
 		return reqList, err
+	}
+
+	if reqList.IsEmpty() {
+		return ReceivedMessagesList{}, errors.New("no new messages")
 	}
 
 	log.WithFields(
@@ -148,7 +181,7 @@ func (ahc *AmsHttpConsumer) Consume(ctx context.Context) (ReceivedMessagesList, 
 			"resource":        ahc.ResourceInfo(),
 			"processing_time": time.Since(t1).String(),
 		},
-	).Debug("Message consumed")
+	).Info("Message consumed")
 
 	return reqList, nil
 }
@@ -184,7 +217,6 @@ func (ahc *AmsHttpConsumer) Ack(ctx context.Context, ackId string) error {
 	if resp.StatusCode != http.StatusOK {
 		buf := bytes.Buffer{}
 		buf.ReadFrom(resp.Body)
-		err = errors.New(fmt.Sprintf("an error occurred while trying to acknowledge message with ackId %v from %v, %v", ackId, ahc.ResourceInfo(), buf.String()))
 		log.WithFields(
 			log.Fields{
 				"type":     "service_log",

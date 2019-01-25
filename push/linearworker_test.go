@@ -6,7 +6,9 @@ import (
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/consumers"
 	"github.com/ARGOeu/ams-push-server/senders"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
+	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
@@ -23,7 +25,7 @@ func (suite *LinearWorkerTestSuite) TestNewLinearWorker() {
 	s := senders.NewHttpSender("", &http.Client{})
 	sub := &amsPb.Subscription{}
 
-	lw := NewLinearWorker(sub, c, s)
+	lw := NewLinearWorker(sub, c, s, make(chan consumers.CancelableError))
 
 	suite.Equal(sub, lw.sub)
 	suite.Equal(c, lw.consumer)
@@ -134,36 +136,80 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	}
 
 	// no error
-	e := lw.push()
-	suite.Nil(e)
-
-	// empty sub should not forward any message to ack
-	c.SubStatus = "empty_sub"
-	// clear slices
-	c.GeneratedMessages = nil
-	c.AckMessages = nil
-	e1 := lw.push()
-	suite.Nil(e1)
-	suite.Equal(0, len(c.AckMessages))
+	lw.push()
+	suite.Equal(1, len(c.AckMessages))
+	suite.Equal(1, len(c.GeneratedMessages))
+	suite.Equal(1, len(s.PushMessages))
 
 	// receive consumer error
+	// no message available to send
+	// no message available to ack
 	c.SubStatus = "error_sub"
-	e2 := lw.push()
-	suite.Equal("error while consuming", e2.Error())
+	c.GeneratedMessages = nil
+	c.AckMessages = nil
+	s.PushMessages = nil
+	lw.push()
+	suite.Equal(0, len(c.AckMessages))
+	suite.Equal(0, len(c.GeneratedMessages))
+	suite.Equal(0, len(s.PushMessages))
 
 	// receive ack error
 	c.SubStatus = "normal_sub"
 	c.AckStatus = "timeout_ack"
-	e3 := lw.push()
-	suite.Equal("error while acknowledging", e3.Error())
+	c.GeneratedMessages = nil
+	c.AckMessages = nil
+	s.PushMessages = nil
+	lw.push()
+	suite.Equal(0, len(c.AckMessages))
+	suite.Equal(1, len(c.GeneratedMessages))
+	suite.Equal(1, len(s.PushMessages))
 
 	// send error
+	// no message available for ack
 	c.AckStatus = "normal_ack"
 	s.SendStatus = "error_send"
-	e4 := lw.push()
-	suite.Equal("error while sending", e4.Error())
+	c.GeneratedMessages = nil
+	c.AckMessages = nil
+	s.PushMessages = nil
+	lw.push()
+	suite.Equal(0, len(c.AckMessages))
+	suite.Equal(1, len(c.GeneratedMessages))
+	suite.Equal(0, len(s.PushMessages))
+
+	// consume error and cancel(project not found)
+	c.SubStatus = "error_sub_no_project"
+	c.GeneratedMessages = nil
+	c.AckMessages = nil
+	s.PushMessages = nil
+	cancelCh := make(chan consumers.CancelableError, 1)
+	lw.deactivationChan = cancelCh
+	lw.push()
+	suite.Equal(0, len(c.AckMessages))
+	suite.Equal(0, len(c.GeneratedMessages))
+	suite.Equal(0, len(s.PushMessages))
+	suite.Equal(consumers.CancelableError{
+		ErrMsg:   "project doesn't exist",
+		Resource: "error_sub_no_project",
+	}, <-cancelCh)
+
+	// consume error and cancel(sub not found)
+	c.SubStatus = "error_sub_no_sub"
+	c.GeneratedMessages = nil
+	c.AckMessages = nil
+	s.PushMessages = nil
+	cancelCh2 := make(chan consumers.CancelableError, 1)
+	lw.deactivationChan = cancelCh2
+	lw.push()
+	suite.Equal(0, len(c.AckMessages))
+	suite.Equal(0, len(c.GeneratedMessages))
+	suite.Equal(0, len(s.PushMessages))
+	suite.Equal(consumers.CancelableError{
+		ErrMsg:   "Subscription doesn't exist",
+		Resource: "error_sub_no_sub",
+	}, <-cancelCh2)
 }
 
 func TestLinearWorkerTestSuite(t *testing.T) {
+	logrus.SetOutput(ioutil.Discard)
 	suite.Run(t, new(LinearWorkerTestSuite))
 }
