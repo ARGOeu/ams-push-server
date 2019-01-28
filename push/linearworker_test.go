@@ -140,6 +140,7 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	suite.Equal(1, len(c.AckMessages))
 	suite.Equal(1, len(c.GeneratedMessages))
 	suite.Equal(1, len(s.PushMessages))
+	suite.Equal(0, len(c.UpdatedStatusMessages))
 
 	// receive consumer error
 	// no message available to send
@@ -165,9 +166,11 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	suite.Equal(1, len(s.PushMessages))
 
 	// send error
+	// one update status message since an error occurred during send
 	// no message available for ack
 	c.AckStatus = "normal_ack"
 	s.SendStatus = "error_send"
+	c.UpdStatus = "normal_upd"
 	c.GeneratedMessages = nil
 	c.AckMessages = nil
 	s.PushMessages = nil
@@ -175,6 +178,17 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	suite.Equal(0, len(c.AckMessages))
 	suite.Equal(1, len(c.GeneratedMessages))
 	suite.Equal(0, len(s.PushMessages))
+	suite.Equal(1, len(c.UpdatedStatusMessages))
+	pushErr1stCycle := lw.pushErr
+	suite.Regexp("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\serror\\swhile\\ssending", c.UpdatedStatusMessages[0])
+	suite.Regexp("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\serror\\swhile\\ssending", pushErr1stCycle)
+	// the next push cycle after a failure send. which is now successful should try to update the resource
+	// if the update fails the push err should remain until the resource ets finally updated
+	s.SendStatus = "normal send "
+	c.UpdStatus = "error_upd"
+	lw.push()
+	pushErr2ndCycle := lw.pushErr
+	suite.Equal(pushErr1stCycle, pushErr2ndCycle)
 
 	// consume error and cancel(project not found)
 	c.SubStatus = "error_sub_no_project"

@@ -24,6 +24,8 @@ type Consumer interface {
 	// ToCancelableError checks whether or not an error represents a cancelable error
 	// for the respective consumer, if it does, it formats it to a cancelable error
 	ToCancelableError(error error) (CancelableError, bool)
+	// UpdateResourceStatus updates the status of the resource
+	UpdateResourceStatus(ctx context.Context, status string) error
 }
 
 // There are specific errors that if they are faced they indicate that the consumption should stop

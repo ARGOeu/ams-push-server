@@ -174,6 +174,35 @@ func (suite *AmsHttpConsumerTestSuite) TestToCancelableError() {
 	suite.Equal(CancelableError{}, ce3)
 }
 
+func (suite *AmsHttpConsumerTestSuite) TestUpdateResourceStatus() {
+
+	client := &http.Client{
+		Transport: new(MockConsumeRoundTripper),
+	}
+
+	// normal case
+	c := NewAmsHttpConsumer("e2", "/normal_sub", "", client)
+
+	e1 := c.UpdateResourceStatus(context.Background(), "")
+
+	suite.Nil(e1)
+
+	// test the case where an error occurred while interacting with ams
+	c = NewAmsHttpConsumer("e2", "/error_sub", "", client)
+
+	e2 := c.UpdateResourceStatus(context.Background(), "")
+
+	expOut := `{
+		 "error": {
+			"code": 500,
+			"message": "Internal error",
+			"status": "INTERNAL_ERROR"
+		 }
+		}`
+
+	suite.Equal(expOut, e2.Error())
+}
+
 func TestAmsHttpConsumerTestSuite(t *testing.T) {
 	logrus.SetOutput(ioutil.Discard)
 	suite.Run(t, new(AmsHttpConsumerTestSuite))

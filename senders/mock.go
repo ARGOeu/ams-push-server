@@ -3,7 +3,6 @@ package senders
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -12,6 +11,10 @@ import (
 type MockSender struct {
 	SendStatus   string
 	PushMessages []PushMsg
+}
+
+func (s *MockSender) Destination() string {
+	return "mock desstination"
 }
 
 func (s *MockSender) Send(ctx context.Context, msg PushMsg) error {
@@ -35,7 +38,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 
 	header := make(http.Header)
 	header.Set("Content-type", ApplicationJson)
-	logrus.Error(r.URL.Path)
+
 	switch r.URL.Path {
 
 	case "/receive_here_200":
@@ -48,7 +51,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		}
 	case "/receive_here_201":
 		resp = &http.Response{
-			StatusCode: 200,
+			StatusCode: 201,
 			// Send response to be tested
 			Body: ioutil.NopCloser(strings.NewReader("")),
 			// Must be set to non-nil value or it panics
@@ -56,7 +59,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		}
 	case "/receive_here_204":
 		resp = &http.Response{
-			StatusCode: 200,
+			StatusCode: 204,
 			// Send response to be tested
 			Body: ioutil.NopCloser(strings.NewReader("")),
 			// Must be set to non-nil value or it panics
@@ -64,7 +67,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		}
 	case "/receive_here_102":
 		resp = &http.Response{
-			StatusCode: 200,
+			StatusCode: 102,
 			// Send response to be tested
 			Body: ioutil.NopCloser(strings.NewReader("")),
 			// Must be set to non-nil value or it panics
@@ -72,11 +75,12 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		}
 	case "/receive_here_error":
 
-		err := `
-		"error": {
+		err := `{
+		 "error": {
 			"code": 500,
 			"message": "Internal error",
 			"status": "INTERNAL_ERROR"
+		 }
 		}`
 
 		resp = &http.Response{
