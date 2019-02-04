@@ -38,6 +38,8 @@ type Config struct {
 	TrustUnknownCAs bool `json:"trust_unknown_cas"`
 	// log level(DEBUG,INFO,WARNING,ERROR)
 	LogLevel string `json:"log_level" required:"true"`
+	// whether or not it should try to load any push enabled subscriptions, upon starting up
+	SkipSubsLoad bool `json:"skip_subs_load"`
 	// tls configuration to be used by the grpc server
 	tlsConfig *tls.Config
 }

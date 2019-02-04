@@ -223,6 +223,16 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	}, <-cancelCh2)
 }
 
+func (suite *LinearWorkerTestSuite) TestConsumer() {
+
+	mc := new(consumers.MockConsumer)
+	lw := LinearWorker{
+		consumer: mc,
+	}
+
+	suite.Equal(mc, lw.consumer)
+}
+
 func TestLinearWorkerTestSuite(t *testing.T) {
 	logrus.SetOutput(ioutil.Discard)
 	suite.Run(t, new(LinearWorkerTestSuite))
