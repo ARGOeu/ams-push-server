@@ -1,48 +1,56 @@
 package main
 
 import (
+	"bytes"
+	"flag"
+	"fmt"
 	amsgRPC "github.com/ARGOeu/ams-push-server/api/v1/grpc"
-	"github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
-	"github.com/sirupsen/logrus"
+	"github.com/ARGOeu/ams-push-server/config"
+	log "github.com/sirupsen/logrus"
 	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
+	"io/ioutil"
 	"log/syslog"
 	"net"
-	"time"
 )
 
-var LOGGER = logrus.New()
-
 func init() {
-	LOGGER.SetFormatter(&logrus.TextFormatter{FullTimestamp: true, DisableColors: true})
+
+	fmter := &log.TextFormatter{FullTimestamp: true, DisableColors: true}
 	hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+
+	log.SetFormatter(fmter)
+
 	if err == nil {
-		LOGGER.AddHook(hook)
+		log.AddHook(hook)
 	}
 }
 
 func main() {
 
-	opts := []grpc_logrus.Option{
-		grpc_logrus.WithDurationField(func(duration time.Duration) (key string, value interface{}) {
-			return "grpc.time_ns", duration.Nanoseconds()
-		}),
-	}
+	// Retrieve configuration file location from a cli argument
+	cfgPath := flag.String("config", "/etc/ams-push-server/conf.d/ams-push-server-config.json", "Path for the required configuration file.")
+	flag.Parse()
 
-	srvOpts := grpc_middleware.WithUnaryServerChain(
-		grpc_ctxtags.UnaryServerInterceptor(),
-		grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(LOGGER), opts...),
-	)
-
-	listener, err := net.Listen("tcp", ":5555")
+	bCfg, err := ioutil.ReadFile(*cfgPath)
 	if err != nil {
-		LOGGER.Fatalf("Could not listen, %v", err.Error())
+		log.Fatalf("Error while reading file, %v", err.Error())
 	}
 
-	srv := amsgRPC.NewGRPCServer(srvOpts)
+	// initialize the config
+	cfg := new(config.Config)
+	err = cfg.LoadFromJson(bytes.NewReader(bCfg))
+	if err != nil {
+		log.Fatalf("Error while loading configuration, %v", err.Error())
+	}
 
-	LOGGER.Infoln("API    gRPC Server will serve on port: 5555")
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", cfg.ServicePort))
+	if err != nil {
+		log.Fatalf("Could not listen, %v", err.Error())
+	}
+
+	srv := amsgRPC.NewGRPCServer(cfg)
+
+	log.Infof("API    gRPC Server will serve on port: %v", cfg.ServicePort)
 
 	defer func() {
 		listener.Close()
@@ -50,8 +58,7 @@ func main() {
 	}()
 
 	err = srv.Serve(listener)
-
 	if err != nil {
-		LOGGER.Fatalf("Could not serve, %v", err.Error())
+		log.Fatalf("Could not serve, %v", err.Error())
 	}
 }

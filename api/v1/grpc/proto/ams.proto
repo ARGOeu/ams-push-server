@@ -40,7 +40,7 @@ message Subscription {
     // The full topic name of the topic that the subscription is associated.
     string full_topic = 2;
     // Required. Information regarding the push functionality.
-    PushConfig pushConfig = 4;
+    PushConfig push_config = 4;
 }
 
 // PushConfig holds information on how a push subscription functions.
@@ -48,7 +48,7 @@ message PushConfig {
     // Required. An https endpoint to where the messages will be pushed.
     string push_endpoint = 1;
     // Required. Retry policy.
-    RetryPolicy retryPolicy = 2;
+    RetryPolicy retry_policy = 2;
 }
 
 // RetryPolicy holds information regarding the retry policy.
