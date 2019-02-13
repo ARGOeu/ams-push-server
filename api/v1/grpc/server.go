@@ -128,6 +128,7 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 	if err == nil {
 		grpcLogger.AddHook(hook)
 	}
+	grpcLogger.SetLevel(cfg.GetLogLevel())
 
 	var srvOptions []grpc.ServerOption
 
