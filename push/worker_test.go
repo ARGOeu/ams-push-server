@@ -24,13 +24,13 @@ func (suite *WorkerTestSuite) TestNew() {
 	}
 
 	// normal creation
-	w1, err1 := New(s1, &consumers.MockConsumer{}, &senders.MockSender{})
+	w1, err1 := New(s1, &consumers.MockConsumer{}, &senders.MockSender{}, make(chan consumers.CancelableError))
 	suite.IsType(&LinearWorker{}, w1)
 	suite.Nil(err1)
 
 	// unimplemented worker type
 	s1.PushConfig.RetryPolicy.Type = "unknown"
-	w2, err2 := New(s1, nil, nil)
+	w2, err2 := New(s1, nil, nil, nil)
 	suite.Equal("worker unknown not yet implemented", err2.Error())
 	suite.Nil(w2)
 }

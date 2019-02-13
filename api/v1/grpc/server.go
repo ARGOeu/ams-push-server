@@ -12,6 +12,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
@@ -29,9 +30,10 @@ import (
 
 // PushService holds all the the information and functionality regarding the push implementation
 type PushService struct {
-	Cfg         *config.Config
-	Client      *http.Client
-	PushWorkers map[string]push.Worker
+	Cfg            *config.Config
+	Client         *http.Client
+	PushWorkers    map[string]push.Worker
+	deactivateChan chan consumers.CancelableError
 }
 
 // NewPushService returns a pointer to a PushService and initialises its fields
@@ -55,7 +57,37 @@ func NewPushService(cfg *config.Config) *PushService {
 
 	ps.Client = client
 
+	ps.deactivateChan = make(chan consumers.CancelableError)
+	go ps.handleDeactivateChannel()
+
 	return ps
+}
+
+// handleDeactivateChannel listens on the deactivate channel in order to stop any subscription that caused a cancelable error
+func (ps *PushService) handleDeactivateChannel() {
+
+	for {
+		cancelErr, ok := <-ps.deactivateChan
+		if ok {
+			err := ps.deactivateSubscription(cancelErr.Resource)
+			if err != nil {
+				logrus.WithFields(
+					log.Fields{
+						"type":         "system_log",
+						"subscription": cancelErr.Resource,
+					},
+				).Warning("Tried to deactivate malfunctioning subscription but was not active")
+			}
+			logrus.WithFields(
+				logrus.Fields{
+					"type":         "system_log",
+					"subscription": cancelErr.Resource,
+					"error":        cancelErr.ErrMsg,
+				},
+			).Info("Deactivated malfunctioning subscription")
+
+		}
+	}
 }
 
 // ActivateSubscription activates a subscription so the service can start handling the push functionality
@@ -80,7 +112,7 @@ func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.Activa
 	// choose a sender
 	s, _ := senders.New(senders.HttpSenderType, r.Subscription.PushConfig.PushEndpoint, ps.Client)
 
-	worker, err := push.New(r.Subscription, c, s)
+	worker, err := push.New(r.Subscription, c, s, ps.deactivateChan)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid argument, %v", err.Error())
 	}
@@ -96,18 +128,29 @@ func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.Activa
 // DeactivateSubscription deactivates a subscription so the service can stop handling the push functionality for it
 func (ps *PushService) DeactivateSubscription(ctx context.Context, r *amsPb.DeactivateSubscriptionRequest) (*amsPb.DeactivateSubscriptionResponse, error) {
 
-	if !ps.IsSubActive(r.FullName) {
-		return nil, status.Errorf(codes.NotFound, "Subscription %v is not active", r.FullName)
+	err := ps.deactivateSubscription(r.FullName)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
-
-	w := ps.PushWorkers[r.FullName]
-	w.Stop()
-
-	delete(ps.PushWorkers, r.FullName)
 
 	return &amsPb.DeactivateSubscriptionResponse{
 		Message: fmt.Sprintf("Subscription %v deactivated", r.FullName),
 	}, nil
+}
+
+// deactivateSubscription checks if the sub is active, then stops the respective worker and removes the sub from the map
+func (ps *PushService) deactivateSubscription(sub string) error {
+
+	if !ps.IsSubActive(sub) {
+		return errors.Errorf("Subscription %v is not active", sub)
+	}
+
+	w := ps.PushWorkers[sub]
+	w.Stop()
+
+	delete(ps.PushWorkers, sub)
+
+	return nil
 }
 
 // IsSubActive checks by subscription name, whether or not a subscription is already active

@@ -4,11 +4,14 @@ import (
 	"context"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/config"
+	"github.com/ARGOeu/ams-push-server/consumers"
 	"github.com/ARGOeu/ams-push-server/push"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"io/ioutil"
 	"testing"
 )
 
@@ -104,6 +107,45 @@ func (suite *ServerTestSuite) TestIsSubActive() {
 	suite.False(ps.IsSubActive("not_active"))
 }
 
+// TestHandleDeactivateChannel tests the that when a cancelable error is send to the channel
+// the respective subscription is deleted
+func (suite *ServerTestSuite) TestHandleDeactivateChannel() {
+
+	ps := NewPushService(config.NewMockConfig())
+
+	ps.PushWorkers["sub1"] = new(push.MockWorker)
+
+	ps.deactivateChan <- consumers.CancelableError{
+		ErrMsg:   "cancel",
+		Resource: "sub1",
+	}
+
+	_, found := ps.PushWorkers["sub1"]
+
+	suite.False(found)
+
+}
+
+func (suite *ServerTestSuite) TestDeactivateSubscription() {
+
+	ps := NewPushService(config.NewMockConfig())
+	mw := new(push.MockWorker)
+	ps.PushWorkers["sub1"] = mw
+
+	e1 := ps.deactivateSubscription("sub1")
+	_, found := ps.PushWorkers["sub1"]
+
+	// test normal case(delete entry from map, deactivate worker)
+	suite.Equal("stopped", mw.Status)
+	suite.False(found)
+	suite.Nil(e1)
+
+	e2 := ps.deactivateSubscription("unknown")
+
+	// test the case where the sub is not active
+	suite.Equal("Subscription unknown is not active", e2.Error())
+}
+
 // TestNewPushService tests the NewPushService function that returns a *PushService and that its fields are set properly
 func (suite *ServerTestSuite) TestNewPushService() {
 
@@ -149,5 +191,6 @@ func (suite *ServerTestSuite) TestNewGRPCServer() {
 }
 
 func TestServerTestSuite(t *testing.T) {
+	logrus.SetOutput(ioutil.Discard)
 	suite.Run(t, new(ServerTestSuite))
 }
