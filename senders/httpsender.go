@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -53,13 +52,6 @@ func (s *HttpSender) Send(ctx context.Context, msg PushMsg) error {
 	t1 := time.Now()
 	resp, err := s.client.Do(req)
 	if err != nil {
-		log.WithFields(
-			log.Fields{
-				"type":     "service_log",
-				"endpoint": s.endpoint,
-				"error":    err.Error(),
-			},
-		).Error("Could not send message")
 		return err
 	}
 
@@ -68,15 +60,7 @@ func (s *HttpSender) Send(ctx context.Context, msg PushMsg) error {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusProcessing {
 		buf := bytes.Buffer{}
 		buf.ReadFrom(resp.Body)
-		log.WithFields(
-			log.Fields{
-				"type":     "service_log",
-				"endpoint": s.endpoint,
-				"error":    buf.String(),
-			},
-		).Error("Could not send message")
-		err = errors.New(fmt.Sprintf("an error occurred while trying to send message to %v, %v", s.endpoint, buf.String()))
-		return err
+		return errors.New(buf.String())
 	}
 
 	log.WithFields(
@@ -86,7 +70,12 @@ func (s *HttpSender) Send(ctx context.Context, msg PushMsg) error {
 			"endpoint":        s.endpoint,
 			"processing_time": time.Since(t1).String(),
 		},
-	).Debug("Message delivered successfully")
+	).Info("Message delivered successfully")
 
 	return nil
+}
+
+// Destination returns the http endpoint where data is being sent
+func (s *HttpSender) Destination() string {
+	return s.endpoint
 }

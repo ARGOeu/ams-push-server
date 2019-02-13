@@ -17,6 +17,8 @@ const (
 type Sender interface {
 	// Send sends the data to a remote destination
 	Send(ctx context.Context, msg PushMsg) error
+	// Destination returns the target destination where the sender sends the data
+	Destination() string
 }
 
 // New acts as a sender factory, creates and returns a new sender based on the provided type

@@ -2,7 +2,9 @@ package senders
 
 import (
 	"context"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
+	"io/ioutil"
 	"net/http"
 	"testing"
 )
@@ -53,16 +55,23 @@ func (suite *HttpSenderTestSuite) TestSend() {
 	s5 := NewHttpSender("https://example.com:8080/receive_here_error", client)
 	e5 := s5.Send(context.Background(), PushMsg{})
 
-	expOut := `an error occurred while trying to send message to https://example.com:8080/receive_here_error, 
-		"error": {
+	expOut := `{
+		 "error": {
 			"code": 500,
 			"message": "Internal error",
 			"status": "INTERNAL_ERROR"
+		 }
 		}`
 
 	suite.Equal(expOut, e5.Error())
 }
 
+func (suite *HttpSenderTestSuite) TestDestination() {
+	s := NewHttpSender("example.com:443", nil)
+	suite.Equal("example.com:443", s.Destination())
+}
+
 func TestHttpSenderTestSuite(t *testing.T) {
+	logrus.SetOutput(ioutil.Discard)
 	suite.Run(t, new(HttpSenderTestSuite))
 }

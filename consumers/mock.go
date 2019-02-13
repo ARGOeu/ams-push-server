@@ -13,10 +13,34 @@ import (
 )
 
 type MockConsumer struct {
-	GeneratedMessages []ReceivedMessage
-	AckMessages       []string
-	SubStatus         string
-	AckStatus         string
+	GeneratedMessages     []ReceivedMessage
+	AckMessages           []string
+	SubStatus             string
+	AckStatus             string
+	UpdStatus             string
+	UpdatedStatusMessages []string
+}
+
+func (m *MockConsumer) UpdateResourceStatus(ctx context.Context, status string) error {
+
+	switch m.UpdStatus {
+
+	case "normal_upd":
+		m.UpdatedStatusMessages = append(m.UpdatedStatusMessages, status)
+		return nil
+
+	case "error_upd":
+		err := `{
+		 "error": {
+			"code": 500,
+			"message": "Internal error",
+			"status": "INTERNAL_ERROR"
+		 }
+		}`
+		return errors.New(err)
+	}
+
+	return nil
 }
 
 func (m *MockConsumer) ToCancelableError(error error) (CancelableError, bool) {
@@ -244,6 +268,34 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 
 		resp = &http.Response{
 			StatusCode: 408,
+			// Send response to be tested
+			Body: ioutil.NopCloser(strings.NewReader(err)),
+			// Must be set to non-nil value or it panics
+			Header: header,
+		}
+
+	case "/v1/normal_sub:modifyPushStatus":
+
+		resp = &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(strings.NewReader("")),
+			// Must be set to non-nil value or it panics
+			Header: header,
+		}
+
+	case "/v1/error_sub:modifyPushStatus":
+
+		err := `{
+		 "error": {
+			"code": 500,
+			"message": "Internal error",
+			"status": "INTERNAL_ERROR"
+		 }
+		}`
+
+		resp = &http.Response{
+			StatusCode: 500,
 			// Send response to be tested
 			Body: ioutil.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics

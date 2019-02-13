@@ -6,6 +6,7 @@ import (
 	"github.com/ARGOeu/ams-push-server/senders"
 	"time"
 
+	"fmt"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	log "github.com/sirupsen/logrus"
 )
@@ -18,6 +19,7 @@ type LinearWorker struct {
 	cancel           context.CancelFunc
 	ctx              context.Context
 	deactivationChan chan<- consumers.CancelableError
+	pushErr          string
 }
 
 // NewLinearWorker initialises and configures a new linear worker
@@ -106,14 +108,53 @@ func (w *LinearWorker) push() {
 
 	err = w.sender.Send(w.ctx, pm)
 	if err != nil {
+		log.WithFields(
+			log.Fields{
+				"type":     "service_log",
+				"endpoint": w.sender.Destination(),
+				"error":    err.Error(),
+			},
+		).Error("Could not send message")
+
+		w.pushErr = fmt.Sprintf("%v %v", time.Now().UTC().Format("2006-01-02T15:04:05"), err.Error())
+		err = w.consumer.UpdateResourceStatus(w.ctx, w.pushErr)
+
+		if err != nil {
+			log.WithFields(
+				log.Fields{
+					"type":     "service_log",
+					"resource": w.consumer.ResourceInfo(),
+					"error":    err.Error(),
+				},
+			).Error("Could not update error status")
+		}
 		return
+	}
+
+	// we check to see if there was an error from the previous send attempt
+	// if there was an error, we should reset the resource status
+	// since the problem has been bypassed
+	if w.pushErr != "" {
+		err = w.consumer.UpdateResourceStatus(w.ctx, fmt.Sprintf("Subscription %v activated", w.sub.FullName))
+		// if we couldn't update the status we don't reset the pushErr
+		// in order for a following cycle to try and update it again
+		if err != nil {
+			log.WithFields(
+				log.Fields{
+					"type":     "service_log",
+					"resource": w.consumer.ResourceInfo(),
+					"error":    err.Error(),
+				},
+			).Error("Could not update ok status")
+		} else {
+			w.pushErr = ""
+		}
 	}
 
 	err = w.consumer.Ack(w.ctx, rml.RecMsgs[0].AckID)
 	if err != nil {
 		return
 	}
-
 }
 
 // Stop stops the push worker's functionality

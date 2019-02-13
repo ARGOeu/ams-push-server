@@ -17,6 +17,10 @@ const (
 	SubscriptionNotFound = "Subscription doesn't exist"
 )
 
+type PushStatus struct {
+	PushStatus string `json:"push_status"`
+}
+
 // Attributes is key/value pairs of extra data
 type Attributes map[string]string
 
@@ -237,6 +241,54 @@ func (ahc *AmsHttpConsumer) Ack(ctx context.Context, ackId string) error {
 			"processing_time": time.Since(t1).String(),
 		},
 	).Debug("Message acknowledged")
+
+	return nil
+}
+
+// UpdateResourceStatus updates the subscription's status
+func (ahc *AmsHttpConsumer) UpdateResourceStatus(ctx context.Context, status string) error {
+
+	pushStatus := PushStatus{
+		PushStatus: status,
+	}
+
+	pushB, err := json.Marshal(pushStatus)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("https://%v/v1%v:modifyPushStatus?key=%v", ahc.endpoint, ahc.fullSub, ahc.token)
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(pushB))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", ApplicationJson)
+
+	t1 := time.Now()
+
+	resp, err := ahc.client.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		buf := bytes.Buffer{}
+		buf.ReadFrom(resp.Body)
+		return errors.New(buf.String())
+	}
+
+	log.WithFields(
+		log.Fields{
+			"type":            "performance",
+			"status":          status,
+			"resource":        ahc.ResourceInfo(),
+			"processing_time": time.Since(t1).String(),
+		},
+	).Info("Resource status updated")
 
 	return nil
 }
