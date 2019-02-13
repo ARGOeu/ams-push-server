@@ -12,10 +12,12 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	gRPCHealth "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
@@ -127,18 +129,27 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 		grpcLogger.AddHook(hook)
 	}
 
-	opts := []grpc_logrus.Option{
+	var srvOptions []grpc.ServerOption
+
+	logOpts := []grpc_logrus.Option{
 		grpc_logrus.WithDurationField(func(duration time.Duration) (key string, value interface{}) {
 			return "grpc.time_ns", duration.Nanoseconds()
 		}),
 	}
 
-	srvOpts := grpc_middleware.WithUnaryServerChain(
+	logOptions := grpc_middleware.WithUnaryServerChain(
 		grpc_ctxtags.UnaryServerInterceptor(),
-		grpc_logrus.UnaryServerInterceptor(log.NewEntry(grpcLogger), opts...),
+		grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(grpcLogger), logOpts...),
 	)
 
-	srv := grpc.NewServer(srvOpts)
+	srvOptions = append(srvOptions, logOptions)
+
+	if cfg.TLSEnabled {
+		srvOptions = append(srvOptions, grpc.Creds(credentials.NewTLS(cfg.GetTLSConfig())))
+	}
+
+	srv := grpc.NewServer(srvOptions...)
+
 	healthService := health.NewServer()
 	healthService.SetServingStatus("api.v1.grpc.PushService", gRPCHealth.HealthCheckResponse_SERVING)
 	gRPCHealth.RegisterHealthServer(srv, healthService)

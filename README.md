@@ -62,6 +62,7 @@ Before you start, you need to issue a valid certificate.
   "ams_host": "localhost",
   "ams_port": 8080,
   "verify_ssl": true,
+  "tls_enabled": true,
   "trust_unknown_cas": false 
 }
  ```
