@@ -12,5 +12,6 @@ func NewMockConfig() *Config {
 	cfg.AmsPort = 8080
 	cfg.VerifySSL = true
 	cfg.TrustUnknownCAs = false
+	cfg.SkipSubsLoad = true
 	return cfg
 }

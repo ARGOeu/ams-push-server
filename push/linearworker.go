@@ -22,6 +22,11 @@ type LinearWorker struct {
 	pushErr          string
 }
 
+// Consumer returns the currently in use consumer
+func (w *LinearWorker) Consumer() consumers.Consumer {
+	return w.consumer
+}
+
 // NewLinearWorker initialises and configures a new linear worker
 func NewLinearWorker(sub *amsPb.Subscription, c consumers.Consumer, s senders.Sender, ch chan<- consumers.CancelableError) *LinearWorker {
 	lw := new(LinearWorker)

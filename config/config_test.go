@@ -34,6 +34,7 @@ func (suite *ConfigTestSuite) TestValidateRequired() {
 		TLSEnabled:                true,
 		TrustUnknownCAs:           false,
 		LogLevel:                  "INFO",
+		SkipSubsLoad:              true,
 	}
 
 	// test the case where where everything is set properly
@@ -55,7 +56,8 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
   "verify_ssl": true,
   "tls_enabled": false,
   "trust_unknown_cas": true,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "skip_subs_load": true
 }
 `
 	cfg := new(Config)
@@ -73,6 +75,7 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 	suite.Equal(false, cfg.TLSEnabled)
 	suite.Equal(true, cfg.TrustUnknownCAs)
 	suite.Equal("INFO", cfg.LogLevel)
+	suite.Equal(true, cfg.SkipSubsLoad)
 
 	suite.Nil(e1)
 

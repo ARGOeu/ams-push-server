@@ -12,6 +12,8 @@ type PushError struct {
 	SubName string
 }
 
+type WorkerStatus string
+
 // Worker encapsulates the flow of consuming, sending and acknowledging
 type Worker interface {
 	// Start starts the the push functionality based on the type of the worker
@@ -20,6 +22,8 @@ type Worker interface {
 	Stop()
 	// Subscription returns the currently active subscription that is being handled by the worker
 	Subscription() *amsPb.Subscription
+	// Consumer returns the consumer that the worker is using
+	Consumer() consumers.Consumer
 }
 
 // New acts as a worker factory, creates and returns a new worker based on the provided type
