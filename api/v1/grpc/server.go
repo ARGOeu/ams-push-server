@@ -30,12 +30,15 @@ import (
 	"time"
 )
 
+const ServiceUnavailable = "The push service is currently unable to handle any requests"
+
 // PushService holds all the the information and functionality regarding the push implementation
 type PushService struct {
 	Cfg            *config.Config
 	Client         *http.Client
 	PushWorkers    map[string]push.Worker
 	deactivateChan chan consumers.CancelableError
+	status         string
 }
 
 // NewPushService returns a pointer to a PushService and initialises its fields
@@ -63,7 +66,7 @@ func NewPushService(cfg *config.Config) *PushService {
 	go ps.handleDeactivateChannel()
 
 	if !cfg.SkipSubsLoad {
-		ps.loadSubscriptions()
+		go ps.loadSubscriptions()
 	}
 
 	return ps
@@ -94,6 +97,16 @@ func (ps *PushService) handleDeactivateChannel() {
 
 		}
 	}
+}
+
+// Status returns the stat of the service, whether or not it is functioning properly
+func (ps *PushService) Status(context.Context, *amsPb.StatusRequest) (*amsPb.StatusResponse, error) {
+
+	if ps.status != "ok" {
+		return &amsPb.StatusResponse{}, status.Errorf(codes.Internal, "%v.%v", ServiceUnavailable, ps.status)
+	}
+
+	return &amsPb.StatusResponse{}, nil
 }
 
 // ActivateSubscription activates a subscription so the service can start handling the push functionality
@@ -187,7 +200,10 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 		}),
 	}
 
+	s := NewPushService(cfg)
+
 	logOptions := grpc_middleware.WithUnaryServerChain(
+		StatusInterceptor(s),
 		grpc_ctxtags.UnaryServerInterceptor(),
 		grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(grpcLogger), logOpts...),
 	)
@@ -201,10 +217,9 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 	srv := grpc.NewServer(srvOptions...)
 
 	healthService := health.NewServer()
-	healthService.SetServingStatus("api.v1.grpc.PushService", gRPCHealth.HealthCheckResponse_SERVING)
+	healthService.SetServingStatus("", gRPCHealth.HealthCheckResponse_SERVING)
 	gRPCHealth.RegisterHealthServer(srv, healthService)
 
-	s := NewPushService(cfg)
 	amsPb.RegisterPushServiceServer(srv, s)
 
 	return srv
@@ -221,6 +236,7 @@ func (ps *PushService) loadSubscriptions() {
 	for !userFound {
 		userInfo, err = ps.getPushWorkerUser()
 		if err != nil {
+			ps.status = "Could not retrieve push worker user"
 			log.WithFields(
 				log.Fields{
 					"type":  "system_log",
@@ -231,6 +247,8 @@ func (ps *PushService) loadSubscriptions() {
 		}
 		userFound = true
 	}
+
+	ps.status = "ok"
 
 	for _, project := range userInfo.Projects {
 
