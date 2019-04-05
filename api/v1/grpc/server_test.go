@@ -23,6 +23,21 @@ type ServerTestSuite struct {
 	suite.Suite
 }
 
+func (suite *ServerTestSuite) TestStatus() {
+
+	ps := &PushService{}
+
+	ps.status = "not ok"
+
+	_, e1 := ps.Status(context.Background(), &amsPb.StatusRequest{})
+	suite.Equal(status.Error(codes.Internal, "The push service is currently unable to handle any requests.not ok"), e1)
+
+	ps.status = "ok"
+	_, e2 := ps.Status(context.Background(), &amsPb.StatusRequest{})
+	suite.Nil(e2)
+
+}
+
 // TestActivateSubscriptionOK tests the normal case where a subscription is added successfully
 func (suite *ServerTestSuite) TestActivateSubscriptionOK() {
 
@@ -274,6 +289,9 @@ func (suite *ServerTestSuite) TestLoadSubscriptions() {
 	ps.Client = client
 
 	ps.loadSubscriptions()
+
+	// since there was no problem retrieving the ams user, status should be ok
+	suite.Equal("ok", ps.status)
 
 	// normal case, sub1 is push enabled and it should be activated successfully
 	_, sub1Found := ps.PushWorkers["/projects/push1/subscriptions/sub1"]
