@@ -1,4 +1,6 @@
 # Ams Push Server
+<img src="https://jenkins.argo.grnet.gr/static/3c75a153/images/headshot.png" alt="Jenkins" width="25"/> [![Build Status](https://jenkins.argo.grnet.gr/job/ams-push-server_devel/badge/icon)](https://jenkins.argo.grnet.gr/job/ams-push-server_devel)
+
 The ams push server is a component that handles the push functionality for the respective
 push enabled subscriptions in the [argo-messaging-service.](https://github.com/ARGOeu/argo-messaging-service)
 
