@@ -1,0 +1,12 @@
+[Unit]
+Description=ARGO Ams Push Server
+
+[Service]
+SyslogIdentifier=ams_push_server
+User=ams-push-server
+Group=ams-push-server
+WorkingDirectory=/var/www/ams-push-server
+ExecStart=/bin/bash -c '/var/www/ams-push-server/ams-push-server'
+
+[Install]
+WantedBy=multi-user.target
