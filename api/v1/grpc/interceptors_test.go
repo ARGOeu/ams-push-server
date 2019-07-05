@@ -2,9 +2,14 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"testing"
 )
@@ -58,6 +63,63 @@ func (suite *InterceptorsTestSuite) TestStatusInterceptor() {
 	suite.Equal("i3", r3.(string))
 	suite.Nil(err3)
 
+}
+
+func (suite *InterceptorsTestSuite) TestAuthInterceptor() {
+
+	acl1 := []string{"OU=local"}
+
+	// since tlsEnabled is false, no ACL will take place
+	interceptor1 := AuthInterceptor(acl1, false)
+
+	r1, err1 := interceptor1(
+		context.Background(),
+		"i1",
+		&grpc.UnaryServerInfo{FullMethod: "/PushService/Random"},
+		MockUnaryHandler)
+
+	suite.Nil(err1)
+	suite.Equal("i1", r1.(string))
+
+	// normal case where the Certificate in the incoming request, exists in the ACL aswell
+
+	interceptor2 := AuthInterceptor(acl1, true)
+
+	cert1 := x509.Certificate{
+		Subject: pkix.Name{
+			OrganizationalUnit: []string{"local"},
+		},
+	}
+	ctx1 := context.TODO()
+	p1 := peer.Peer{
+		AuthInfo: credentials.TLSInfo{
+			State: tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{&cert1},
+			},
+		},
+	}
+
+	r2, err2 := interceptor2(
+		peer.NewContext(ctx1, &p1),
+		"i1",
+		&grpc.UnaryServerInfo{FullMethod: "/PushService/Random"},
+		MockUnaryHandler)
+
+	suite.Nil(err2)
+	suite.Equal("i1", r2.(string))
+
+	// error case
+	acl2 := []string{"OU=notlocal"}
+	interceptor3 := AuthInterceptor(acl2, true)
+
+	r3, err3 := interceptor3(
+		peer.NewContext(ctx1, &p1),
+		"i1",
+		&grpc.UnaryServerInfo{FullMethod: "/PushService/Random"},
+		MockUnaryHandler)
+
+	suite.Nil(r3)
+	suite.Equal(status.Error(codes.Unauthenticated, "UNAUTHORISED"), err3)
 }
 
 func MockUnaryHandler(ctx context.Context, req interface{}) (interface{}, error) {
