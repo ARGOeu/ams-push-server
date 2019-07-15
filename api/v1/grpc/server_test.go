@@ -115,6 +115,36 @@ func (suite *ServerTestSuite) TestActivateSubscriptionCONFLICT() {
 	suite.Nil(s)
 }
 
+func (suite *ServerTestSuite) TestSubscriptionStatus() {
+
+	ps := NewPushService(config.NewMockConfig())
+	sub := amsPb.Subscription{
+		FullName: "sub1",
+		PushConfig: &amsPb.PushConfig{
+			RetryPolicy: &amsPb.RetryPolicy{},
+		}}
+	// not found case
+	s, e := ps.SubscriptionStatus(context.Background(), &amsPb.SubscriptionStatusRequest{FullName: "sub1"})
+
+	suite.Equal(status.Error(codes.NotFound, "Subscription sub1 is not active"), e)
+
+	suite.Nil(s)
+
+	// normal case
+	ps.PushWorkers["sub1"] = &push.MockWorker{
+		Sub:       sub,
+		SubStatus: "ok",
+	}
+
+	s2, e2 := ps.SubscriptionStatus(context.Background(), &amsPb.SubscriptionStatusRequest{FullName: "sub1"})
+
+	suite.Equal(&amsPb.SubscriptionStatusResponse{
+		Status: "ok",
+	}, s2)
+
+	suite.Nil(e2)
+}
+
 // TestIsSubActive tests the IsSubActive method of PushService for both true and false cases
 func (suite *ServerTestSuite) TestIsSubActive() {
 
@@ -156,7 +186,7 @@ func (suite *ServerTestSuite) TestDeactivateSubscription() {
 	_, found := ps.PushWorkers["sub1"]
 
 	// test normal case(delete entry from map, deactivate worker)
-	suite.Equal("stopped", mw.Status)
+	suite.Equal("stopped", mw.Status())
 	suite.False(found)
 	suite.Nil(e1)
 

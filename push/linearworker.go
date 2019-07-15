@@ -27,6 +27,15 @@ func (w *LinearWorker) Consumer() consumers.Consumer {
 	return w.consumer
 }
 
+// Status returns whether or not the worker is experiencing any error handling its assigned subscription
+func (w *LinearWorker) Status() string {
+	if w.pushErr == "" {
+		return fmt.Sprintf("Subscription %v is currently active", w.sub.FullName)
+	}
+
+	return w.pushErr
+}
+
 // NewLinearWorker initialises and configures a new linear worker
 func NewLinearWorker(sub *amsPb.Subscription, c consumers.Consumer, s senders.Sender, ch chan<- consumers.CancelableError) *LinearWorker {
 	lw := new(LinearWorker)
