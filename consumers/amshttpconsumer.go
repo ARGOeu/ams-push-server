@@ -221,15 +221,7 @@ func (ahc *AmsHttpConsumer) Ack(ctx context.Context, ackId string) error {
 	if resp.StatusCode != http.StatusOK {
 		buf := bytes.Buffer{}
 		buf.ReadFrom(resp.Body)
-		log.WithFields(
-			log.Fields{
-				"type":     "service_log",
-				"ackId":    ackId,
-				"resource": ahc.ResourceInfo(),
-				"error":    buf.String(),
-			},
-		).Error("Could not acknowledge message")
-		err = errors.New(fmt.Sprintf("an error occurred while trying to acknowledge message with ackId %v from %v, %v", ackId, ahc.ResourceInfo(), buf.String()))
+		err = fmt.Errorf("an error occurred while trying to acknowledge message with ackId %v from %v, %v", ackId, ahc.ResourceInfo(), buf.String())
 		return err
 	}
 
