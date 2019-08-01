@@ -10,5 +10,6 @@
   "tls_enabled": true,
   "trust_unknown_cas": false,
   "log_level": "INFO",
-  "skip_subs_load": false
+  "skip_subs_load": false,
+  "acl": ["OU=my.local,O=mkcert development certificate"]
 }

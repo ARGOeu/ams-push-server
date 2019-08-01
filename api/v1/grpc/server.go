@@ -192,8 +192,6 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 	}
 	grpcLogger.SetLevel(cfg.GetLogLevel())
 
-	var srvOptions []grpc.ServerOption
-
 	logOpts := []grpc_logrus.Option{
 		grpc_logrus.WithDurationField(func(duration time.Duration) (key string, value interface{}) {
 			return "grpc.time_ns", duration.Nanoseconds()
@@ -202,13 +200,14 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 
 	s := NewPushService(cfg)
 
-	logOptions := grpc_middleware.WithUnaryServerChain(
-		StatusInterceptor(s),
-		grpc_ctxtags.UnaryServerInterceptor(),
-		grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(grpcLogger), logOpts...),
-	)
-
-	srvOptions = append(srvOptions, logOptions)
+	srvOptions := []grpc.ServerOption{
+		grpc_middleware.WithUnaryServerChain(
+			grpc_ctxtags.UnaryServerInterceptor(),
+			grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(grpcLogger), logOpts...),
+			AuthInterceptor(cfg.ACL, cfg.TLSEnabled),
+			StatusInterceptor(s),
+		),
+	}
 
 	if cfg.TLSEnabled {
 		srvOptions = append(srvOptions, grpc.Creds(credentials.NewTLS(cfg.GetTLSConfig())))

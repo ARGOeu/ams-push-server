@@ -67,7 +67,8 @@ Before you start, you need to issue a valid certificate.
   "tls_enabled": true,
   "trust_unknown_cas": false,
   "log_level": "INFO",
-  "skip_subs_load": false
+  "skip_subs_load": false,
+  "acl": ["OU=my.local,O=mkcert development certificate"]
 }
  ```
  - `service_port:` The port that the service will bind to.  
@@ -98,6 +99,8 @@ Before you start, you need to issue a valid certificate.
  - `skip_subs_load:`  The service will try by default to contact the ams in order to retrieve all active push subscriptions   
  that are assigned to it and start their push cycles`(consume->send->ack)`. This will be done through the its user profile in ams(which is the profile associated with the)
  `ams_token`). You can control this behavior and decide whether or not to pre-load any already active subscriptions.
+ 
+ - `acl`: List of certificate DNs which are allowed to access the service.
   
 You can find the configuration template at `conf/ams-push-server-config.template`.
 ## Managing the protocol buffers and gRPC definitions

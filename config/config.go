@@ -42,6 +42,8 @@ type Config struct {
 	SkipSubsLoad bool `json:"skip_subs_load"`
 	// tls configuration to be used by the grpc server
 	tlsConfig *tls.Config
+	// list of certificate DNs that should be allowed to access the service
+	ACL []string `json:"acl"`
 }
 
 var logLevels = map[string]log.Level{
