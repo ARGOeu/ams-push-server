@@ -319,31 +319,6 @@ func (ps *PushService) loadSubscriptions() {
 				continue
 			}
 
-			// if the retrieved sub has an error-ish push status, update it
-			wantedStatus := fmt.Sprintf("Subscription %v activated", sub.FullName)
-			if sub.PushStatus != wantedStatus {
-				w, ok := ps.PushWorkers[sub.FullName]
-				if ok {
-					err = w.Consumer().UpdateResourceStatus(context.TODO(), wantedStatus)
-					if err != nil {
-						log.WithFields(
-							log.Fields{
-								"type":         "service_log",
-								"subscription": subName,
-								"error":        err.Error(),
-							},
-						).Error("Could not update subscription's push status")
-					}
-				} else {
-					log.WithFields(
-						log.Fields{
-							"type":         "system_log",
-							"subscription": fullSubName,
-						},
-					).Warning("Worker was not found")
-				}
-			}
-
 			log.WithFields(
 				log.Fields{
 					"type":         "system_log",

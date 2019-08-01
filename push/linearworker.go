@@ -112,6 +112,14 @@ func (w *LinearWorker) push() {
 				"error":    err.Error(),
 			},
 		).Error("Could not consume message")
+
+		w.pushErr = fmt.Sprintf(
+			"%v - %v, %v",
+			time.Now().UTC().Format("2006-01-02T15:04:05"),
+			"Could not consume message",
+			err.Error(),
+		)
+
 		return
 	}
 
@@ -130,45 +138,38 @@ func (w *LinearWorker) push() {
 			},
 		).Error("Could not send message")
 
-		w.pushErr = fmt.Sprintf("%v %v", time.Now().UTC().Format("2006-01-02T15:04:05"), err.Error())
-		err = w.consumer.UpdateResourceStatus(w.ctx, w.pushErr)
+		w.pushErr = fmt.Sprintf(
+			"%v - %v, %v",
+			time.Now().UTC().Format("2006-01-02T15:04:05"),
+			"Could not send message",
+			err.Error(),
+		)
 
-		if err != nil {
-			log.WithFields(
-				log.Fields{
-					"type":     "service_log",
-					"resource": w.consumer.ResourceInfo(),
-					"error":    err.Error(),
-				},
-			).Error("Could not update error status")
-		}
 		return
-	}
-
-	// we check to see if there was an error from the previous send attempt
-	// if there was an error, we should reset the resource status
-	// since the problem has been bypassed
-	if w.pushErr != "" {
-		err = w.consumer.UpdateResourceStatus(w.ctx, fmt.Sprintf("Subscription %v activated", w.sub.FullName))
-		// if we couldn't update the status we don't reset the pushErr
-		// in order for a following cycle to try and update it again
-		if err != nil {
-			log.WithFields(
-				log.Fields{
-					"type":     "service_log",
-					"resource": w.consumer.ResourceInfo(),
-					"error":    err.Error(),
-				},
-			).Error("Could not update ok status")
-		} else {
-			w.pushErr = ""
-		}
 	}
 
 	err = w.consumer.Ack(w.ctx, rml.RecMsgs[0].AckID)
 	if err != nil {
+
+		log.WithFields(
+			log.Fields{
+				"type":  "service_log",
+				"error": err.Error(),
+			},
+		).Error("Could not acknowledge message")
+
+		w.pushErr = fmt.Sprintf(
+			"%v - %v, %v",
+			time.Now().UTC().Format("2006-01-02T15:04:05"),
+			"Could not acknowledge message",
+			err.Error(),
+		)
+
 		return
 	}
+
+	// if no errors occurred during the push cycle make sure that there is no error registered
+	w.pushErr = ""
 }
 
 // Stop stops the push worker's functionality
