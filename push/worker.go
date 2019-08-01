@@ -24,6 +24,8 @@ type Worker interface {
 	Subscription() *amsPb.Subscription
 	// Consumer returns the consumer that the worker is using
 	Consumer() consumers.Consumer
+	// Status returns the status of the worker
+	Status() string
 }
 
 // New acts as a worker factory, creates and returns a new worker based on the provided type

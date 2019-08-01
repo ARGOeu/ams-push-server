@@ -115,6 +115,7 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	sub := &amsPb.Subscription{
+		FullName: "sub1",
 		PushConfig: &amsPb.PushConfig{
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,
@@ -141,6 +142,7 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	suite.Equal(1, len(c.GeneratedMessages))
 	suite.Equal(1, len(s.PushMessages))
 	suite.Equal(0, len(c.UpdatedStatusMessages))
+	suite.Equal("Subscription sub1 is currently active", lw.Status())
 
 	// receive consumer error
 	// no message available to send
@@ -182,6 +184,8 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	pushErr1stCycle := lw.pushErr
 	suite.Regexp("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\serror\\swhile\\ssending", c.UpdatedStatusMessages[0])
 	suite.Regexp("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\serror\\swhile\\ssending", pushErr1stCycle)
+	suite.Regexp("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\serror\\swhile\\ssending", lw.Status())
+
 	// the next push cycle after a failure send. which is now successful should try to update the resource
 	// if the update fails the push err should remain until the resource ets finally updated
 	s.SendStatus = "normal send "
@@ -231,6 +235,22 @@ func (suite *LinearWorkerTestSuite) TestConsumer() {
 	}
 
 	suite.Equal(mc, lw.consumer)
+}
+
+func (suite *LinearWorkerTestSuite) TestStatus() {
+
+	lw := LinearWorker{
+		sub: &amsPb.Subscription{
+			FullName: "sub1",
+		},
+	}
+
+	lw.pushErr = "error1"
+
+	suite.Equal("error1", lw.Status())
+
+	lw.pushErr = ""
+	suite.Equal("Subscription sub1 is currently active", lw.Status())
 }
 
 func TestLinearWorkerTestSuite(t *testing.T) {

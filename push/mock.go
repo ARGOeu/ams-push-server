@@ -7,8 +7,13 @@ import (
 
 // MockWorker is to be used as a dummy worker when we want the push actual worker functionality
 type MockWorker struct {
-	Sub    amsPb.Subscription
-	Status string
+	Sub       amsPb.Subscription
+	SubStatus string
+	status    string
+}
+
+func (w *MockWorker) Status() string {
+	return w.SubStatus
 }
 
 func (w *MockWorker) Consumer() consumers.Consumer {
@@ -21,4 +26,7 @@ func (w *MockWorker) Subscription() *amsPb.Subscription {
 
 func (w *MockWorker) Start() {}
 
-func (w *MockWorker) Stop() { w.Status = "stopped" }
+func (w *MockWorker) Stop() {
+	w.status = "stopped"
+	w.SubStatus = "stopped"
+}

@@ -109,6 +109,21 @@ func (ps *PushService) Status(context.Context, *amsPb.StatusRequest) (*amsPb.Sta
 	return &amsPb.StatusResponse{}, nil
 }
 
+// SubscriptionStatus returns the status of the worker that handles the respective subscription
+func (ps *PushService) SubscriptionStatus(ctx context.Context, r *amsPb.SubscriptionStatusRequest) (*amsPb.SubscriptionStatusResponse, error) {
+
+	if !ps.IsSubActive(r.FullName) {
+		return nil, status.Errorf(codes.NotFound, "Subscription %v is not active", r.FullName)
+	}
+
+	w := ps.PushWorkers[r.FullName]
+
+	return &amsPb.SubscriptionStatusResponse{
+		Status: w.Status(),
+	}, nil
+
+}
+
 // ActivateSubscription activates a subscription so the service can start handling the push functionality
 func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.ActivateSubscriptionRequest) (*amsPb.ActivateSubscriptionResponse, error) {
 
