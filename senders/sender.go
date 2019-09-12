@@ -9,14 +9,18 @@ import (
 
 type senderType string
 
+type pushMessageFormat string
+
 const (
-	HttpSenderType senderType = "http-sender"
+	HttpSenderType        senderType        = "http-sender"
+	SingleMessageFormat   pushMessageFormat = "single"
+	MultipleMessageFormat pushMessageFormat = "multi"
 )
 
 // Sender is responsible for delivering data to remote destinations
 type Sender interface {
 	// Send sends the data to a remote destination
-	Send(ctx context.Context, msg PushMsg) error
+	Send(ctx context.Context, msgs PushMsgs, format pushMessageFormat) error
 	// Destination returns the target destination where the sender sends the data
 	Destination() string
 }
@@ -38,4 +42,24 @@ type PushMsg struct {
 	Msg consumers.Message `json:"message"`
 	// the source
 	Sub string `json:"subscription"`
+}
+
+// PushMsgs holds data to be send to a remote endpoint(multiple messages grouped together)
+type PushMsgs struct {
+	// the actual messages
+	Messages []PushMsg `json:"messages"`
+}
+
+// DetermineMessageFormat decides what message format should be used depending on the number of messages
+func DetermineMessageFormat(numberOfMessages int64) pushMessageFormat {
+
+	var f pushMessageFormat
+
+	if numberOfMessages == 1 {
+		f = SingleMessageFormat
+	} else {
+		f = MultipleMessageFormat
+	}
+
+	return f
 }

@@ -27,11 +27,21 @@ func NewHttpSender(endpoint string, client *http.Client) *HttpSender {
 }
 
 // Send delivers a message to remote http endpoint
-func (s *HttpSender) Send(ctx context.Context, msg PushMsg) error {
+func (s *HttpSender) Send(ctx context.Context, msgs PushMsgs, format pushMessageFormat) error {
 
-	msgB, err := json.Marshal(msg)
-	if err != nil {
-		return err
+	var msgB []byte
+	var err error
+
+	if format == SingleMessageFormat {
+		msgB, err = json.Marshal(msgs.Messages[0])
+		if err != nil {
+			return err
+		}
+	} else if format == MultipleMessageFormat {
+		msgB, err = json.Marshal(msgs)
+		if err != nil {
+			return err
+		}
 	}
 
 	req, err := http.NewRequest(http.MethodPost, s.endpoint, bytes.NewBuffer(msgB))
@@ -44,10 +54,10 @@ func (s *HttpSender) Send(ctx context.Context, msg PushMsg) error {
 	log.WithFields(
 		log.Fields{
 			"type":        "service_log",
-			"message":     msg,
+			"message(s)":  msgs,
 			"destination": s.endpoint,
 		},
-	).Debug("Trying to push message")
+	).Debug("Trying to send")
 
 	t1 := time.Now()
 	resp, err := s.client.Do(req)
@@ -66,11 +76,11 @@ func (s *HttpSender) Send(ctx context.Context, msg PushMsg) error {
 	log.WithFields(
 		log.Fields{
 			"type":            "performance_log",
-			"message":         msg,
+			"message(s)":      msgs,
 			"endpoint":        s.endpoint,
 			"processing_time": time.Since(t1).String(),
 		},
-	).Info("Message delivered successfully")
+	).Info("Delivered successfully")
 
 	return nil
 }

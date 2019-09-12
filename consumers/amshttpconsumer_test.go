@@ -2,6 +2,7 @@ package consumers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
@@ -28,24 +29,38 @@ func (suite *AmsHttpConsumerTestSuite) TestNewAmsHttpConsumer() {
 // TestConsume tests various behaviors of the consume functionality
 func (suite *AmsHttpConsumerTestSuite) TestConsume() {
 
+	mcrt := new(MockConsumeRoundTripper)
+
 	client := &http.Client{
-		Transport: new(MockConsumeRoundTripper),
+		Transport: mcrt,
 	}
 
 	// test the normal case, where the consume method will return new messages
 	acl := NewAmsHttpConsumer("", "/normal_sub", "", client)
 
-	m1, e1 := acl.Consume(context.Background())
+	m1, e1 := acl.Consume(context.Background(), 1)
+
+	// check pull options(request body)
+	po := PullOptions{}
+	json.Unmarshal(mcrt.RequestBodyBytes, &po)
 
 	suite.Equal("some_data", m1.RecMsgs[0].Msg.Data)
 	suite.Equal("some_id", m1.RecMsgs[0].Msg.ID)
 	suite.Equal("some_ack_id", m1.RecMsgs[0].AckID)
+	suite.Equal("1", po.MaxMessages)
 	suite.Nil(e1)
+
+	// check for multiple messages
+	po2 := PullOptions{}
+	mcrt.RequestBodyBytes = []byte{}
+	acl.Consume(context.Background(), 3)
+	json.Unmarshal(mcrt.RequestBodyBytes, &po2)
+	suite.Equal("3", po2.MaxMessages)
 
 	// test the case where there are no new messages
 	acl2 := NewAmsHttpConsumer("", "/empty_sub", "", client)
 
-	m2, e2 := acl2.Consume(context.Background())
+	m2, e2 := acl2.Consume(context.Background(), 1)
 
 	suite.Equal(0, len(m2.RecMsgs))
 	suite.Equal("no new messages", e2.Error())
@@ -53,7 +68,7 @@ func (suite *AmsHttpConsumerTestSuite) TestConsume() {
 	// test the case where an error occurred while interacting with ams
 	acl3 := NewAmsHttpConsumer("e1", "/error_sub", "", client)
 
-	_, e3 := acl3.Consume(context.Background())
+	_, e3 := acl3.Consume(context.Background(), 1)
 
 	expOut := `{
 		 "error": {
@@ -68,7 +83,7 @@ func (suite *AmsHttpConsumerTestSuite) TestConsume() {
 	// test the case where an error occurred while interacting with ams(project not found)
 	acl4 := NewAmsHttpConsumer("e1", "/error_sub_no_project", "", client)
 
-	_, e4 := acl4.Consume(context.Background())
+	_, e4 := acl4.Consume(context.Background(), 1)
 
 	expOut2 := `{
 		 "error": {
@@ -83,7 +98,7 @@ func (suite *AmsHttpConsumerTestSuite) TestConsume() {
 	// test the case where an error occurred while interacting with ams(subscription not found)
 	acl5 := NewAmsHttpConsumer("e1", "/error_sub_no_sub", "", client)
 
-	_, e5 := acl5.Consume(context.Background())
+	_, e5 := acl5.Consume(context.Background(), 1)
 
 	expOut3 := `{
 		 "error": {

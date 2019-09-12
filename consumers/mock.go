@@ -64,7 +64,7 @@ func (m *MockConsumer) ToCancelableError(error error) (CancelableError, bool) {
 	return CancelableError{}, false
 }
 
-func (m *MockConsumer) Consume(ctx context.Context) (ReceivedMessagesList, error) {
+func (m *MockConsumer) Consume(ctx context.Context, numberOfMessages int64) (ReceivedMessagesList, error) {
 
 	switch m.SubStatus {
 
@@ -79,8 +79,13 @@ func (m *MockConsumer) Consume(ctx context.Context) (ReceivedMessagesList, error
 			},
 		}
 
-		rml := ReceivedMessagesList{RecMsgs: []ReceivedMessage{rm}}
-		m.GeneratedMessages = append(m.GeneratedMessages, rm)
+		rml := ReceivedMessagesList{RecMsgs: []ReceivedMessage{}}
+
+		for i := 1; i <= int(numberOfMessages); i++ {
+			rml.RecMsgs = append(rml.RecMsgs, rm)
+			m.GeneratedMessages = append(m.GeneratedMessages, rm)
+		}
+
 		return rml, nil
 
 	case "empty_sub":
@@ -141,7 +146,9 @@ func (m *MockConsumer) ResourceInfo() string {
 	return "mock-consumer"
 }
 
-type MockConsumeRoundTripper struct{}
+type MockConsumeRoundTripper struct {
+	RequestBodyBytes []byte
+}
 
 func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 
@@ -149,6 +156,8 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 
 	header := make(http.Header)
 	header.Set("Content-type", ApplicationJson)
+
+	m.RequestBodyBytes, _ = ioutil.ReadAll(r.Body)
 
 	switch r.URL.Path {
 

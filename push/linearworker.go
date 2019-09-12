@@ -86,7 +86,7 @@ Loop:
 // push executes the push cycle of consume -> send -> ack
 func (w *LinearWorker) push() {
 
-	rml, err := w.consumer.Consume(w.ctx)
+	rml, err := w.consumer.Consume(w.ctx, w.sub.PushConfig.MaxMessages)
 	if err != nil {
 
 		ce, ok := w.consumer.ToCancelableError(err)
@@ -123,12 +123,18 @@ func (w *LinearWorker) push() {
 		return
 	}
 
-	pm := senders.PushMsg{
-		Sub: w.consumer.ResourceInfo(),
-		Msg: rml.RecMsgs[0].Msg,
+	pms := senders.PushMsgs{}
+
+	for _, rm := range rml.RecMsgs {
+		msg := senders.PushMsg{
+			Sub: w.consumer.ResourceInfo(),
+			Msg: rm.Msg,
+		}
+
+		pms.Messages = append(pms.Messages, msg)
 	}
 
-	err = w.sender.Send(w.ctx, pm)
+	err = w.sender.Send(w.ctx, pms, senders.DetermineMessageFormat(w.sub.PushConfig.MaxMessages))
 	if err != nil {
 		log.WithFields(
 			log.Fields{
@@ -148,7 +154,7 @@ func (w *LinearWorker) push() {
 		return
 	}
 
-	err = w.consumer.Ack(w.ctx, rml.RecMsgs[0].AckID)
+	err = w.consumer.Ack(w.ctx, rml.Last().AckID)
 	if err != nil {
 
 		log.WithFields(

@@ -14,10 +14,10 @@ type MockSender struct {
 }
 
 func (s *MockSender) Destination() string {
-	return "mock desstination"
+	return "mock destination"
 }
 
-func (s *MockSender) Send(ctx context.Context, msg PushMsg) error {
+func (s *MockSender) Send(ctx context.Context, msgs PushMsgs, format pushMessageFormat) error {
 
 	switch s.SendStatus {
 
@@ -25,12 +25,20 @@ func (s *MockSender) Send(ctx context.Context, msg PushMsg) error {
 		return errors.New("error while sending")
 	}
 
-	s.PushMessages = append(s.PushMessages, msg)
+	if format == SingleMessageFormat {
+		s.PushMessages = append(s.PushMessages, msgs.Messages[0])
+	} else if format == MultipleMessageFormat {
+		for _, msg := range msgs.Messages {
+			s.PushMessages = append(s.PushMessages, msg)
+		}
+	}
 
 	return nil
 }
 
-type MockSenderRoundTripper struct{}
+type MockSenderRoundTripper struct {
+	RequestBodyBytes []byte
+}
 
 func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 
@@ -38,6 +46,8 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 
 	header := make(http.Header)
 	header.Set("Content-type", ApplicationJson)
+
+	m.RequestBodyBytes, _ = ioutil.ReadAll(r.Body)
 
 	switch r.URL.Path {
 
