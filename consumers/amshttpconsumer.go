@@ -8,6 +8,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -62,6 +63,11 @@ type ReceivedMessagesList struct {
 // IsEmpty returns whether or not a received message list is empty
 func (r *ReceivedMessagesList) IsEmpty() bool {
 	return len(r.RecMsgs) <= 0
+}
+
+// Last returns the last ReceivedMessage of the slice
+func (r *ReceivedMessagesList) Last() ReceivedMessage {
+	return r.RecMsgs[len(r.RecMsgs)-1]
 }
 
 // AckMsgs the ack ids for the messages we want to acknowledge
@@ -126,12 +132,12 @@ func (ahc *AmsHttpConsumer) ResourceInfo() string {
 }
 
 // Consume consumes messages from an subscription
-func (ahc *AmsHttpConsumer) Consume(ctx context.Context) (ReceivedMessagesList, error) {
+func (ahc *AmsHttpConsumer) Consume(ctx context.Context, numberOfMessages int64) (ReceivedMessagesList, error) {
 
 	url := fmt.Sprintf("https://%v/v1%v:pull?key=%v", ahc.endpoint, ahc.fullSub, ahc.token)
 
 	pullOptions := PullOptions{
-		MaxMessages:       "1",
+		MaxMessages:       strconv.FormatInt(numberOfMessages, 10),
 		ReturnImmediately: "true",
 	}
 

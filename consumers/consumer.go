@@ -16,7 +16,7 @@ const (
 // Consumer is used to consume data from a source.
 type Consumer interface {
 	// Consume pulls data from the source
-	Consume(ctx context.Context) (ReceivedMessagesList, error)
+	Consume(ctx context.Context, numberOfMessages int64) (ReceivedMessagesList, error)
 	// Ack acknowledges that a data have been successfully pulled and send
 	Ack(ctx context.Context, ackId string) error
 	// ResourceInfo returns returns a string representation of the data source

@@ -299,6 +299,7 @@ func (ps *PushService) loadSubscriptions() {
 						FullTopic: sub.FullTopic,
 						PushConfig: &amsPb.PushConfig{
 							PushEndpoint: sub.PushCfg.Pend,
+							MaxMessages:  sub.PushCfg.MaxMessages,
 							RetryPolicy: &amsPb.RetryPolicy{
 								Period: sub.PushCfg.RetPol.Period,
 								Type:   sub.PushCfg.RetPol.PolicyType,
@@ -435,8 +436,9 @@ type Subscription struct {
 
 // PushConfig holds optional configuration for push operations
 type PushConfig struct {
-	Pend   string      `json:"pushEndpoint"`
-	RetPol RetryPolicy `json:"retryPolicy"`
+	Pend        string      `json:"pushEndpoint"`
+	MaxMessages int64       `json:"maxMessages"`
+	RetPol      RetryPolicy `json:"retryPolicy"`
 }
 
 // RetryPolicy holds information on retry policies

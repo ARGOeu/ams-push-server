@@ -48,6 +48,7 @@ func (suite *LinearWorkerTestSuite) TestStartStopCycle() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	sub := &amsPb.Subscription{
 		PushConfig: &amsPb.PushConfig{
+			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,
 			},
@@ -117,6 +118,7 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 	sub := &amsPb.Subscription{
 		FullName: "sub1",
 		PushConfig: &amsPb.PushConfig{
+			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,
 			},
@@ -136,12 +138,42 @@ func (suite *LinearWorkerTestSuite) TestPush() {
 		cancel:   cancel,
 	}
 
-	// no error
+	// no error - single message
 	lw.push()
 	suite.Equal(1, len(c.AckMessages))
 	suite.Equal(1, len(c.GeneratedMessages))
 	suite.Equal(1, len(s.PushMessages))
 	suite.Equal("Subscription sub1 is currently active", lw.Status())
+
+	sub2 := &amsPb.Subscription{
+		FullName: "sub1",
+		PushConfig: &amsPb.PushConfig{
+			MaxMessages: 3,
+			RetryPolicy: &amsPb.RetryPolicy{
+				Period: rate,
+			},
+		},
+	}
+
+	c2 := new(consumers.MockConsumer)
+	c2.SubStatus = "normal_sub"
+	c2.AckStatus = "normal_ack"
+	s2 := new(senders.MockSender)
+
+	lw2 := LinearWorker{
+		sub:      sub2,
+		consumer: c2,
+		sender:   s2,
+		ctx:      ctx,
+		cancel:   cancel,
+	}
+
+	// no error - multiple messages
+	lw2.push()
+	suite.Equal(1, len(c2.AckMessages))
+	suite.Equal(3, len(c2.GeneratedMessages))
+	suite.Equal(3, len(s2.PushMessages))
+	suite.Equal("Subscription sub1 is currently active", lw2.Status())
 
 	// receive consumer error
 	// no message available to send

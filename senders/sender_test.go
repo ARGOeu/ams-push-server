@@ -24,6 +24,12 @@ func (suite *SenderTestSuite) TestNew() {
 
 }
 
+// TestDetermineMessageFormat tests the DetermineMessageFormat functionality
+func (suite *SenderTestSuite) TestDetermineMessageFormat() {
+	suite.Equal(SingleMessageFormat, DetermineMessageFormat(1))
+	suite.Equal(MultipleMessageFormat, DetermineMessageFormat(30))
+}
+
 func TestSenderTestSuite(t *testing.T) {
 	suite.Run(t, new(SenderTestSuite))
 }
