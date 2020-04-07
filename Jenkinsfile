@@ -67,14 +67,14 @@ pipeline {
                     build job: '/ARGO-utils/argo-swagger-docs', propagate: false
                 }
                 if ( env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'devel' ) {
-                    slackSend( message: ":rocket: New version for <https://jenkins.einfra.grnet.gr/job/ARGO/job/$PROJECT_DIR/|$PROJECT_DIR> : $BRANCH_NAME !")
+                    slackSend( message: ":rocket: New version for <$BUILD_URL|$PROJECT_DIR>:$BRANCH_NAME Job: $JOB_NAME !")
                 }
             }
         }
         failure {
             script{
                 if ( env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'devel' ) {
-                    slackSend( message: ":rain_cloud: Build Failed for <https://jenkins.einfra.grnet.gr/job/ARGO/job/$PROJECT_DIR/|$PROJECT_DIR>.  Branch: $BRANCH_NAME Job: [$JOB_NAME]")
+                    slackSend( message: ":rain_cloud: Build Failed for <$BUILD_URL|$PROJECT_DIR>:$BRANCH_NAME Job: $JOB_NAME")
                 }
             }   
         }
