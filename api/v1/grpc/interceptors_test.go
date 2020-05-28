@@ -67,7 +67,7 @@ func (suite *InterceptorsTestSuite) TestStatusInterceptor() {
 
 func (suite *InterceptorsTestSuite) TestAuthInterceptor() {
 
-	acl1 := []string{"OU=local"}
+	acl1 := []string{"local.example.com"}
 
 	// since tlsEnabled is false, no ACL will take place
 	interceptor1 := AuthInterceptor(acl1, false)
@@ -87,7 +87,7 @@ func (suite *InterceptorsTestSuite) TestAuthInterceptor() {
 
 	cert1 := x509.Certificate{
 		Subject: pkix.Name{
-			OrganizationalUnit: []string{"local"},
+			CommonName: "local.example.com",
 		},
 	}
 	ctx1 := context.TODO()
@@ -106,10 +106,10 @@ func (suite *InterceptorsTestSuite) TestAuthInterceptor() {
 		MockUnaryHandler)
 
 	suite.Nil(err2)
-	suite.Equal("i1", r2.(string))
+	suite.Equal("i1", r2)
 
 	// error case
-	acl2 := []string{"OU=notlocal"}
+	acl2 := []string{"notlocal.example.com"}
 	interceptor3 := AuthInterceptor(acl2, true)
 
 	r3, err3 := interceptor3(
