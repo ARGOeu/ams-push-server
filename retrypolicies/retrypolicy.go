@@ -39,7 +39,7 @@ func New(rp *amsPb.RetryPolicy) (RetryPolicy, error) {
 	case SlowStartRetryPolicy:
 
 		return &Slowstart{
-			timer: time.NewTimer(SlowStartInitialInterval),
+			timer:                   time.NewTimer(SlowStartInitialInterval),
 			previousRestartInterval: SlowStartInitialInterval,
 			previousError:           false,
 		}, nil

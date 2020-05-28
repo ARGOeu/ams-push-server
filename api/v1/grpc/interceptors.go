@@ -50,10 +50,17 @@ func AuthInterceptor(acl []string, tlsEnabled bool) grpc.UnaryServerInterceptor 
 						tls := p.AuthInfo.(credentials.TLSInfo)
 						if len(tls.State.PeerCertificates) > 0 {
 							for _, c := range acl {
-								if c == tls.State.PeerCertificates[0].Subject.ToRDNSequence().String() {
+								if c == tls.State.PeerCertificates[0].Subject.CommonName {
 									return handler(ctx, req)
 								}
 							}
+							log.WithFields(
+								log.Fields{
+									"type":  "error_log",
+									"acl":   acl,
+									"error": fmt.Sprintf("Provided certificate's cn: %v didn't match any ACL entry", tls.State.PeerCertificates[0].Subject.ToRDNSequence().String()),
+								},
+							).Error("unauthorised access to the service")
 						} else {
 							log.WithFields(
 								log.Fields{
