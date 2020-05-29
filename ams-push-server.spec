@@ -3,7 +3,7 @@
 
 Name: ams-push-server
 Summary: ARGO Ams Push Server.
-Version: 0.1.2
+Version: 0.1.3
 Release: 1%{?dist}
 License: ASL 2.0
 Buildroot: %{_tmppath}/%{name}-buildroot
@@ -57,3 +57,5 @@ go clean
 %attr(0644,root,root) /usr/lib/systemd/system/ams-push-server.service
 
 %changelog
+* Wed May 27 2020 Agelos Tsalapatis  <agelos.tsal@gmail.com> 0.1.3-1%{?dist}
+- Release of ams-push-server 0.1.3
