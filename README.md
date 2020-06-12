@@ -10,7 +10,7 @@ Before you start, you need to issue a valid certificate.
 
 ## Set Up
 
-1. Install Golang 1.10
+1. Install Golang 1.14
 2. Create a new work space:
 
       `mkdir ~/go-workspace`
