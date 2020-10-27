@@ -52,7 +52,14 @@ func NewPushService(cfg *config.Config) *PushService {
 	// build the client
 	transCfg := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: !ps.Cfg.VerifySSL},
+			InsecureSkipVerify: !ps.Cfg.VerifySSL,
+		},
+	}
+
+	// if tls is enabled for the server
+	// use the cert/key for outgoing http requests as well
+	if ps.Cfg.TLSEnabled {
+		transCfg.TLSClientConfig.Certificates = ps.Cfg.GetTLSConfig().Certificates
 	}
 
 	client := &http.Client{
