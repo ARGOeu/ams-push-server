@@ -36,6 +36,7 @@ func (suite *ConfigTestSuite) TestValidateRequired() {
 		LogLevel:                  "INFO",
 		SkipSubsLoad:              true,
 		ACL:                       []string{"OU=my.local,O=mkcert development certificate"},
+		SyslogEnabled:             true,
 	}
 
 	// test the case where where everything is set properly
@@ -59,7 +60,8 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
   "trust_unknown_cas": true,
   "log_level": "INFO",
   "skip_subs_load": true,
-  "acl": ["OU=my.local,O=mkcert development certificate"]
+  "acl": ["OU=my.local,O=mkcert development certificate"],
+  "syslog_enabled": true
 }
 `
 	cfg := new(Config)
@@ -79,6 +81,7 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 	suite.Equal("INFO", cfg.LogLevel)
 	suite.Equal(true, cfg.SkipSubsLoad)
 	suite.Equal([]string{"OU=my.local,O=mkcert development certificate"}, cfg.ACL)
+	suite.Equal(true, cfg.SyslogEnabled)
 
 	suite.Nil(e1)
 

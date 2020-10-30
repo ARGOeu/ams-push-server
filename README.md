@@ -68,7 +68,8 @@ Before you start, you need to issue a valid certificate.
   "trust_unknown_cas": false,
   "log_level": "INFO",
   "skip_subs_load": false,
-  "acl": ["OU=my.local,O=mkcert development certificate"]
+  "acl": ["OU=my.local,O=mkcert development certificate"],
+  "syslog_enabled": false
 }
  ```
  - `service_port:` The port that the service will bind to.  
@@ -101,6 +102,8 @@ Before you start, you need to issue a valid certificate.
  `ams_token`). You can control this behavior and decide whether or not to pre-load any already active subscriptions.
  
  - `acl`: List of certificate DNs which are allowed to access the service.
+ 
+ -  `syslog_enabled`: Direct logging of the service to the syslog socket
   
 You can find the configuration template at `conf/ams-push-server-config.template`.
 ## Managing the protocol buffers and gRPC definitions

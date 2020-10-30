@@ -7,22 +7,13 @@ import (
 	amsgRPC "github.com/ARGOeu/ams-push-server/api/v1/grpc"
 	"github.com/ARGOeu/ams-push-server/config"
 	log "github.com/sirupsen/logrus"
-	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"io/ioutil"
-	"log/syslog"
 	"net"
 )
 
 func init() {
-
 	fmter := &log.TextFormatter{FullTimestamp: true, DisableColors: true}
-	hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_DEBUG, "")
-
 	log.SetFormatter(fmter)
-
-	if err == nil {
-		log.AddHook(hook)
-	}
 }
 
 func main() {
