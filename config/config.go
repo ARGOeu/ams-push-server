@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"io"
 	"io/ioutil"
+	"log/syslog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -44,6 +46,8 @@ type Config struct {
 	tlsConfig *tls.Config
 	// list of certificate DNs that should be allowed to access the service
 	ACL []string `json:"acl"`
+	// Enable direct logging of the service to the syslog facility
+	SyslogEnabled bool `json:"syslog_enabled"`
 }
 
 var logLevels = map[string]log.Level{
@@ -107,6 +111,13 @@ func (cfg *Config) LoadFromJson(from io.Reader) error {
 		// skip non configuration fields
 		if fl.Tag.Get("json") == "" {
 			continue
+		}
+
+		if cfg.SyslogEnabled {
+			hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+			if err == nil {
+				log.AddHook(hook)
+			}
 		}
 
 		log.WithFields(

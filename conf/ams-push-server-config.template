@@ -11,5 +11,6 @@
   "trust_unknown_cas": false,
   "log_level": "INFO",
   "skip_subs_load": false,
-  "acl": ["OU=my.local,O=mkcert development certificate"]
+  "acl": ["OU=my.local,O=mkcert development certificate"],
+  "syslog_enabled": false
 }
