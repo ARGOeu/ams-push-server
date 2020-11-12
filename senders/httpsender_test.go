@@ -17,9 +17,10 @@ type HttpSenderTestSuite struct {
 // TestNewHttpSender tests the proper initialisation of an http sender
 func (suite *HttpSenderTestSuite) TestNewHttpSender() {
 
-	s := NewHttpSender("example.com:443", new(http.Client))
+	s := NewHttpSender("example.com:443", "auth-header-1", new(http.Client))
 
 	suite.Equal("example.com:443", s.endpoint)
+	suite.Equal("auth-header-1", s.authZHeader)
 	suite.Equal(new(http.Client), s.client)
 }
 
@@ -33,7 +34,7 @@ func (suite *HttpSenderTestSuite) TestSend() {
 	}
 
 	// test the normal case of 200
-	s1 := NewHttpSender("https://example.com:8080/receive_here_200", client)
+	s1 := NewHttpSender("https://example.com:8080/receive_here_200", "auth-header-1", client)
 	m1 := PushMsg{Sub: "sub"}
 	m1s := PushMsgs{Messages: []PushMsg{m1}}
 	e1 := s1.Send(context.Background(), m1s, MultipleMessageFormat)
@@ -60,22 +61,22 @@ func (suite *HttpSenderTestSuite) TestSend() {
 	suite.False(ok)
 
 	// test the normal case of 201
-	s2 := NewHttpSender("https://example.com:8080/receive_here_201", client)
+	s2 := NewHttpSender("https://example.com:8080/receive_here_201", "", client)
 	e2 := s2.Send(context.Background(), PushMsgs{}, MultipleMessageFormat)
 	suite.Nil(e2)
 
 	// test the normal case of 204
-	s3 := NewHttpSender("https://example.com:8080/receive_here_204", client)
+	s3 := NewHttpSender("https://example.com:8080/receive_here_204", "auth-header-1", client)
 	e3 := s3.Send(context.Background(), PushMsgs{}, MultipleMessageFormat)
 	suite.Nil(e3)
 
 	// test the normal case of 102
-	s4 := NewHttpSender("https://example.com:8080/receive_here_102", client)
+	s4 := NewHttpSender("https://example.com:8080/receive_here_102", "auth-header-1", client)
 	e4 := s4.Send(context.Background(), PushMsgs{}, MultipleMessageFormat)
 	suite.Nil(e4)
 
 	// test the error case
-	s5 := NewHttpSender("https://example.com:8080/receive_here_error", client)
+	s5 := NewHttpSender("https://example.com:8080/receive_here_error", "", client)
 	e5 := s5.Send(context.Background(), PushMsgs{}, MultipleMessageFormat)
 
 	expOut := `{
@@ -90,7 +91,7 @@ func (suite *HttpSenderTestSuite) TestSend() {
 }
 
 func (suite *HttpSenderTestSuite) TestDestination() {
-	s := NewHttpSender("example.com:443", nil)
+	s := NewHttpSender("example.com:443", "auth-header-1", nil)
 	suite.Equal("example.com:443", s.Destination())
 }
 

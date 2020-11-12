@@ -21,7 +21,7 @@ type WorkerTestSuite struct {
 func (suite *WorkerTestSuite) TestNew() {
 
 	c := consumers.NewAmsHttpConsumer("", "", "", &http.Client{})
-	s := senders.NewHttpSender("", &http.Client{})
+	s := senders.NewHttpSender("", "", &http.Client{})
 	sub := &amsPb.Subscription{
 		PushConfig: &amsPb.PushConfig{
 			MaxMessages: 1,
