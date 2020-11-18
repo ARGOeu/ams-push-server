@@ -151,7 +151,7 @@ func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.Activa
 	c, _ := consumers.New(consumers.AmsHttpConsumerType, r.Subscription.FullName, ps.Cfg, ps.Client)
 
 	// choose a sender
-	s, _ := senders.New(senders.HttpSenderType, r.Subscription.PushConfig.PushEndpoint, ps.Client)
+	s, _ := senders.New(senders.HttpSenderType, *r.Subscription.PushConfig, ps.Client)
 
 	worker, err := push.New(r.Subscription, c, s, ps.deactivateChan)
 	if err != nil {
@@ -305,8 +305,9 @@ func (ps *PushService) loadSubscriptions() {
 						FullName:  sub.FullName,
 						FullTopic: sub.FullTopic,
 						PushConfig: &amsPb.PushConfig{
-							PushEndpoint: sub.PushCfg.Pend,
-							MaxMessages:  sub.PushCfg.MaxMessages,
+							PushEndpoint:        sub.PushCfg.Pend,
+							AuthorizationHeader: sub.PushCfg.AuthorizationHeader.Value,
+							MaxMessages:         sub.PushCfg.MaxMessages,
 							RetryPolicy: &amsPb.RetryPolicy{
 								Period: sub.PushCfg.RetPol.Period,
 								Type:   sub.PushCfg.RetPol.PolicyType,
@@ -443,9 +444,15 @@ type Subscription struct {
 
 // PushConfig holds optional configuration for push operations
 type PushConfig struct {
-	Pend        string      `json:"pushEndpoint"`
-	MaxMessages int64       `json:"maxMessages"`
-	RetPol      RetryPolicy `json:"retryPolicy"`
+	Pend                string              `json:"pushEndpoint"`
+	AuthorizationHeader AuthorizationHeader `json:"authorization_header"`
+	MaxMessages         int64               `json:"maxMessages"`
+	RetPol              RetryPolicy         `json:"retryPolicy"`
+}
+
+// AuthorizationHeader holds an optional value to be supplied as an Authorization header to push requests
+type AuthorizationHeader struct {
+	Value string `json:"value"`
 }
 
 // RetryPolicy holds information on retry policies

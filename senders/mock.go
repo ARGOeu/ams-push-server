@@ -52,36 +52,44 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 	switch r.URL.Path {
 
 	case "/receive_here_200":
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("")),
-			// Must be set to non-nil value or it panics
-			Header: header,
+		if r.Header.Get("authorization") == "auth-header-1" {
+			resp = &http.Response{
+				StatusCode: 200,
+				// Send response to be tested
+				Body: ioutil.NopCloser(strings.NewReader("")),
+				// Must be set to non-nil value or it panics
+				Header: header,
+			}
 		}
 	case "/receive_here_201":
-		resp = &http.Response{
-			StatusCode: 201,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("")),
-			// Must be set to non-nil value or it panics
-			Header: header,
+		if r.Header.Get("authorization") == "" {
+			resp = &http.Response{
+				StatusCode: 201,
+				// Send response to be tested
+				Body: ioutil.NopCloser(strings.NewReader("")),
+				// Must be set to non-nil value or it panics
+				Header: header,
+			}
 		}
 	case "/receive_here_204":
-		resp = &http.Response{
-			StatusCode: 204,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("")),
-			// Must be set to non-nil value or it panics
-			Header: header,
+		if r.Header.Get("authorization") == "auth-header-1" {
+			resp = &http.Response{
+				StatusCode: 204,
+				// Send response to be tested
+				Body: ioutil.NopCloser(strings.NewReader("")),
+				// Must be set to non-nil value or it panics
+				Header: header,
+			}
 		}
 	case "/receive_here_102":
-		resp = &http.Response{
-			StatusCode: 102,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("")),
-			// Must be set to non-nil value or it panics
-			Header: header,
+		if r.Header.Get("authorization") == "auth-header-1" {
+			resp = &http.Response{
+				StatusCode: 102,
+				// Send response to be tested
+				Body: ioutil.NopCloser(strings.NewReader("")),
+				// Must be set to non-nil value or it panics
+				Header: header,
+			}
 		}
 	case "/receive_here_error":
 

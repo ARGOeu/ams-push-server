@@ -14,15 +14,17 @@ const ApplicationJson = "application/json"
 
 // HttpSender delivers data to any http endpoint
 type HttpSender struct {
-	client   *http.Client
-	endpoint string
+	client      *http.Client
+	endpoint    string
+	authZHeader string
 }
 
 // NewHttpSender initialises and returns a new http sender
-func NewHttpSender(endpoint string, client *http.Client) *HttpSender {
+func NewHttpSender(endpoint, authz string, client *http.Client) *HttpSender {
 	s := new(HttpSender)
 	s.client = client
 	s.endpoint = endpoint
+	s.authZHeader = authz
 	return s
 }
 
@@ -50,6 +52,9 @@ func (s *HttpSender) Send(ctx context.Context, msgs PushMsgs, format pushMessage
 	}
 
 	req.Header.Set("Content-Type", ApplicationJson)
+	if s.authZHeader != "" {
+		req.Header.Set("Authorization", s.authZHeader)
+	}
 
 	log.WithFields(
 		log.Fields{
