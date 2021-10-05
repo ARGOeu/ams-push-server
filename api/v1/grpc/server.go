@@ -56,12 +56,6 @@ func NewPushService(cfg *config.Config) *PushService {
 		},
 	}
 
-	// if tls is enabled for the server
-	// use the cert/key for outgoing http requests as well
-	if ps.Cfg.TLSEnabled {
-		transCfg.TLSClientConfig.Certificates = ps.Cfg.GetTLSConfig().Certificates
-	}
-
 	client := &http.Client{
 		Transport: transCfg,
 		Timeout:   time.Duration(30 * time.Second),
