@@ -3,6 +3,7 @@ package senders
 import (
 	"context"
 	"fmt"
+	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/consumers"
 	"net/http"
 )
@@ -26,11 +27,11 @@ type Sender interface {
 }
 
 // New acts as a sender factory, creates and returns a new sender based on the provided type
-func New(sType senderType, endpoint string, client *http.Client) (Sender, error) {
+func New(sType senderType, cfg amsPb.PushConfig, client *http.Client) (Sender, error) {
 
 	switch sType {
 	case HttpSenderType:
-		return NewHttpSender(endpoint, client), nil
+		return NewHttpSender(cfg.PushEndpoint, cfg.AuthorizationHeader, client), nil
 	}
 
 	return nil, fmt.Errorf("sender %v not yet implemented", sType)

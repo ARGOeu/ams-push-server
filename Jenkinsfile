@@ -63,9 +63,6 @@ pipeline {
         }
         success {
             script{
-                if ( env.BRANCH_NAME == 'devel' ) {
-                    build job: '/ARGO-utils/argo-swagger-docs', propagate: false
-                }
                 if ( env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'devel' ) {
                     slackSend( message: ":rocket: New version for <$BUILD_URL|$PROJECT_DIR>:$BRANCH_NAME Job: $JOB_NAME !")
                 }

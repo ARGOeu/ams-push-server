@@ -288,9 +288,14 @@ func (suite *ServerTestSuite) TestGetSubscription() {
 		Period:     300,
 	}
 
+	authz := AuthorizationHeader{
+		Value: "auth-header-1",
+	}
+
 	pc := PushConfig{
-		Pend:   "example.com:9999",
-		RetPol: rp,
+		Pend:                "example.com:9999",
+		AuthorizationHeader: authz,
+		RetPol:              rp,
 	}
 
 	expectedSub := Subscription{
@@ -397,10 +402,14 @@ func (m *MockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 			PolicyType: "linear",
 			Period:     300,
 		}
+		authz := AuthorizationHeader{
+			Value: "auth-header-1",
+		}
 
 		pc := PushConfig{
-			Pend:   "example.com:9999",
-			RetPol: rp,
+			Pend:                "example.com:9999",
+			AuthorizationHeader: authz,
+			RetPol:              rp,
 		}
 
 		s := Subscription{
