@@ -5,6 +5,7 @@ import (
 	"fmt"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/consumers"
+	ams "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"github.com/ARGOeu/ams-push-server/retrypolicies"
 	"github.com/ARGOeu/ams-push-server/senders"
 	"github.com/stretchr/testify/suite"
@@ -20,7 +21,7 @@ type WorkerTestSuite struct {
 // TestNew tests that the worker factory behaves properly
 func (suite *WorkerTestSuite) TestNew() {
 
-	c := consumers.NewAmsHttpConsumer("", "", "", &http.Client{})
+	c := consumers.NewAmsHttpConsumer("", &ams.Client{})
 	s := senders.NewHttpSender("", "", &http.Client{})
 	sub := &amsPb.Subscription{
 		PushConfig: &amsPb.PushConfig{

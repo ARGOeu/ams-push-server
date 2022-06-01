@@ -72,7 +72,9 @@ func (s *HttpSender) Send(ctx context.Context, msgs PushMsgs, format pushMessage
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusProcessing {
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated &&
+		resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusProcessing {
 		buf := bytes.Buffer{}
 		buf.ReadFrom(resp.Body)
 		return errors.New(buf.String())

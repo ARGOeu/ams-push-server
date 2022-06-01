@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/protobuf v1.2.1-0.20181120001857-882cf97a83ad
+	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/pkg/errors v0.8.0
 	github.com/sirupsen/logrus v1.2.0
