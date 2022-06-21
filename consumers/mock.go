@@ -1,19 +1,16 @@
 package consumers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	ams "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"net/http"
-	"strings"
 	"time"
 )
 
 type MockConsumer struct {
-	GeneratedMessages     []ReceivedMessage
+	GeneratedMessages     []ams.ReceivedMessage
 	AckMessages           []string
 	SubStatus             string
 	AckStatus             string
@@ -64,22 +61,22 @@ func (m *MockConsumer) ToCancelableError(error error) (CancelableError, bool) {
 	return CancelableError{}, false
 }
 
-func (m *MockConsumer) Consume(ctx context.Context, numberOfMessages int64) (ReceivedMessagesList, error) {
+func (m *MockConsumer) Consume(ctx context.Context, numberOfMessages int64) (ams.ReceivedMessagesList, error) {
 
 	switch m.SubStatus {
 
 	case "normal_sub":
 
-		rm := ReceivedMessage{
+		rm := ams.ReceivedMessage{
 			AckID: fmt.Sprintf("ackid_%v", len(m.GeneratedMessages)),
-			Msg: Message{
+			Msg: ams.Message{
 				Data:    "some data",
 				ID:      fmt.Sprintf("id_%v", len(m.GeneratedMessages)),
 				PubTime: time.Now().UTC().Format(time.StampNano),
 			},
 		}
 
-		rml := ReceivedMessagesList{RecMsgs: []ReceivedMessage{}}
+		rml := ams.ReceivedMessagesList{RecMsgs: []ams.ReceivedMessage{}}
 
 		for i := 1; i <= int(numberOfMessages); i++ {
 			rml.RecMsgs = append(rml.RecMsgs, rm)
@@ -90,15 +87,15 @@ func (m *MockConsumer) Consume(ctx context.Context, numberOfMessages int64) (Rec
 
 	case "empty_sub":
 
-		rml := ReceivedMessagesList{
-			RecMsgs: make([]ReceivedMessage, 0),
+		rml := ams.ReceivedMessagesList{
+			RecMsgs: make([]ams.ReceivedMessage, 0),
 		}
 
 		return rml, nil
 
 	case "error_sub":
 
-		return ReceivedMessagesList{}, errors.New("error while consuming")
+		return ams.ReceivedMessagesList{}, errors.New("error while consuming")
 
 	case "error_sub_no_project":
 		err := `{
@@ -108,7 +105,7 @@ func (m *MockConsumer) Consume(ctx context.Context, numberOfMessages int64) (Rec
 			"status": "NOT_FOUND"
 		 }
 		}`
-		return ReceivedMessagesList{}, errors.New(err)
+		return ams.ReceivedMessagesList{}, errors.New(err)
 
 	case "error_sub_no_sub":
 		err := `{
@@ -118,11 +115,11 @@ func (m *MockConsumer) Consume(ctx context.Context, numberOfMessages int64) (Rec
 			"status": "NOT_FOUND"
 		 }
 		}`
-		return ReceivedMessagesList{}, errors.New(err)
+		return ams.ReceivedMessagesList{}, errors.New(err)
 
 	}
 
-	return ReceivedMessagesList{}, nil
+	return ams.ReceivedMessagesList{}, nil
 }
 
 func (m *MockConsumer) Ack(ctx context.Context, ackId string) error {
@@ -144,174 +141,4 @@ func (m *MockConsumer) Ack(ctx context.Context, ackId string) error {
 
 func (m *MockConsumer) ResourceInfo() string {
 	return "mock-consumer"
-}
-
-type MockConsumeRoundTripper struct {
-	RequestBodyBytes []byte
-}
-
-func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-
-	var resp *http.Response
-
-	header := make(http.Header)
-	header.Set("Content-type", ApplicationJson)
-
-	m.RequestBodyBytes, _ = ioutil.ReadAll(r.Body)
-
-	switch r.URL.Path {
-
-	case "/v1/normal_sub:pull":
-
-		rm := ReceivedMessage{
-			AckID: "some_ack_id",
-			Msg: Message{
-				ID:   "some_id",
-				Data: "some_data",
-			},
-		}
-
-		rml := ReceivedMessagesList{
-			RecMsgs: []ReceivedMessage{rm},
-		}
-
-		b, _ := json.Marshal(rml)
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(b)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/empty_sub:pull":
-
-		rml := ReceivedMessagesList{
-			RecMsgs: make([]ReceivedMessage, 0),
-		}
-
-		b, _ := json.Marshal(rml)
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(b)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/error_sub:pull":
-
-		err := `{
-		 "error": {
-			"code": 500,
-			"message": "Internal error",
-			"status": "INTERNAL_ERROR"
-		 }
-		}`
-
-		resp = &http.Response{
-			StatusCode: 500,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/error_sub_no_project:pull":
-
-		err := `{
-		 "error": {
-			"code": 404,
-			"message": "project doesn't exist",
-			"status": "NOT_FOUND"
-		 }
-		}`
-
-		resp = &http.Response{
-			StatusCode: 404,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/error_sub_no_sub:pull":
-
-		err := `{
-		 "error": {
-			"code": 404,
-			"message": "Subscription doesn't exist",
-			"status": "NOT_FOUND"
-		 } 
-		}`
-
-		resp = &http.Response{
-			StatusCode: 404,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/normal_sub:acknowledge":
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(`{}`)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/timeout_sub:acknowledge":
-
-		err := `{
-		 "error": {
-			"code": 408,
-			"message": "ack timeout",
-			"status": "TIMEOUT"
-		 }
-		}`
-
-		resp = &http.Response{
-			StatusCode: 408,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/normal_sub:modifyPushStatus":
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("")),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/error_sub:modifyPushStatus":
-
-		err := `{
-		 "error": {
-			"code": 500,
-			"message": "Internal error",
-			"status": "INTERNAL_ERROR"
-		 }
-		}`
-
-		resp = &http.Response{
-			StatusCode: 500,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	}
-
-	return resp, nil
 }
