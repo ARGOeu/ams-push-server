@@ -36,6 +36,7 @@ func (suite *SubscriptionTestSuite) TestIsPushEnabled() {
 	sub := Subscription{
 		PushCfg: PushConfig{
 			Pend: "remote.com",
+			Type: HttpEndpointPushConfig,
 		},
 	}
 	suite.True(sub.IsPushEnabled())
@@ -61,6 +62,7 @@ func (suite *SubscriptionTestSuite) TestGetSubscription() {
 	}
 
 	pc := PushConfig{
+		Type:                HttpEndpointPushConfig,
 		Pend:                "example.com:9999",
 		AuthorizationHeader: authz,
 		RetPol:              rp,

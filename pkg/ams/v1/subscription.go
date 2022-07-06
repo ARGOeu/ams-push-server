@@ -11,22 +11,27 @@ import (
 const (
 	// requires the full subscription path
 	// .e.g. /projects/project_one/subscriptions/sub_one
-	getSubscriptionPath = "/v1%s"
+	getSubscriptionPath    = "/v1%s"
+	HttpEndpointPushConfig = "http_endpoint"
+	MattermostPushConfig   = "mattermost"
 )
 
 type Subscription struct {
-	FullName   string     `json:"name"`
-	FullTopic  string     `json:"topic"`
-	PushCfg    PushConfig `json:"pushConfig"`
-	PushStatus string     `json:"push_status"`
+	FullName  string     `json:"name"`
+	FullTopic string     `json:"topic"`
+	PushCfg   PushConfig `json:"pushConfig"`
 }
 
 // PushConfig holds optional configuration for push operations
 type PushConfig struct {
+	Type                string              `json:"type"`
 	Pend                string              `json:"pushEndpoint"`
-	AuthorizationHeader AuthorizationHeader `json:"authorization_header"`
+	AuthorizationHeader AuthorizationHeader `json:"authorizationHeader"`
 	MaxMessages         int64               `json:"maxMessages"`
 	RetPol              RetryPolicy         `json:"retryPolicy"`
+	MattermostUrl       string              `json:"mattermostUrl"`
+	MattermostUsername  string              `json:"mattermostUsername"`
+	MattermostChannel   string              `json:"mattermostChannel"`
 }
 
 // AuthorizationHeader holds an optional value to be supplied as an Authorization header to push requests
@@ -41,7 +46,7 @@ type RetryPolicy struct {
 }
 
 func (s *Subscription) IsPushEnabled() bool {
-	return s.PushCfg != PushConfig{}
+	return s.PushCfg.Type != ""
 }
 
 type SubscriptionService struct {

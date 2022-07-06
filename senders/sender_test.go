@@ -1,7 +1,7 @@
 package senders
 
 import (
-	"github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
+	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/stretchr/testify/suite"
 	"net/http"
 	"testing"
@@ -15,18 +15,24 @@ type SenderTestSuite struct {
 func (suite *SenderTestSuite) TestNew() {
 
 	// normal creation
-	pushCFG := proto.PushConfig{
+	pushCFG := amsPb.PushConfig{
+		Type:                amsPb.PushType_HTTP_ENDPOINT,
 		PushEndpoint:        "example.com",
 		AuthorizationHeader: "auth-header-1",
 	}
-	s1, e1 := New(HttpSenderType, pushCFG, &http.Client{})
+	s1, e1 := New(pushCFG, &http.Client{})
 	suite.IsType(&HttpSender{}, s1)
 	suite.Nil(e1)
 
-	// unimplemented sender
-	_, e2 := New("unknown", pushCFG, nil)
-	suite.Equal("sender unknown not yet implemented", e2.Error())
-
+	// normal creation
+	pushCFG2 := amsPb.PushConfig{
+		Type:                amsPb.PushType_MATTERMOST,
+		PushEndpoint:        "example.com",
+		AuthorizationHeader: "auth-header-1",
+	}
+	s2, e2 := New(pushCFG2, &http.Client{})
+	suite.IsType(&MattermostSender{}, s2)
+	suite.Nil(e2)
 }
 
 // TestDetermineMessageFormat tests the DetermineMessageFormat functionality

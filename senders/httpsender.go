@@ -46,7 +46,7 @@ func (s *HttpSender) Send(ctx context.Context, msgs PushMsgs, format pushMessage
 		}
 	}
 
-	req, err := http.NewRequest(http.MethodPost, s.endpoint, bytes.NewBuffer(msgB))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.endpoint, bytes.NewBuffer(msgB))
 	if err != nil {
 		return err
 	}

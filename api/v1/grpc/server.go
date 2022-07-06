@@ -137,16 +137,18 @@ func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.Activa
 		return nil, status.Errorf(codes.AlreadyExists, "Subscription %v is already activated", r.Subscription.FullName)
 	}
 
-	_, err := url.ParseRequestURI(r.Subscription.PushConfig.PushEndpoint)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid push endpoint, %v", err.Error())
+	if r.Subscription.PushConfig.Type == amsPb.PushType_HTTP_ENDPOINT {
+		_, err := url.ParseRequestURI(r.Subscription.PushConfig.PushEndpoint)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid push endpoint, %v", err.Error())
+		}
 	}
 
 	// choose a consumer
 	c, _ := consumers.New(consumers.AmsHttpConsumerType, r.Subscription.FullName, ps.AmsClient)
 
 	// choose a sender
-	s, _ := senders.New(senders.HttpSenderType, *r.Subscription.PushConfig, ps.Client)
+	s, _ := senders.New(*r.Subscription.PushConfig, ps.Client)
 
 	worker, err := push.New(r.Subscription, c, s, ps.deactivateChan)
 	if err != nil {
@@ -312,12 +314,20 @@ func (ps *PushService) loadSubscriptions() {
 				},
 			).Info("Subscription retrieved successfully")
 
+			var pushType amsPb.PushType
+			if sub.PushCfg.Type == ams.HttpEndpointPushConfig {
+				pushType = amsPb.PushType_HTTP_ENDPOINT
+			} else {
+				pushType = amsPb.PushType_MATTERMOST
+			}
+
 			_, err = ps.ActivateSubscription(context.TODO(),
 				&amsPb.ActivateSubscriptionRequest{
 					Subscription: &amsPb.Subscription{
 						FullName:  sub.FullName,
 						FullTopic: sub.FullTopic,
 						PushConfig: &amsPb.PushConfig{
+							Type:                pushType,
 							PushEndpoint:        sub.PushCfg.Pend,
 							AuthorizationHeader: sub.PushCfg.AuthorizationHeader.Value,
 							MaxMessages:         sub.PushCfg.MaxMessages,
@@ -325,6 +335,9 @@ func (ps *PushService) loadSubscriptions() {
 								Period: sub.PushCfg.RetPol.Period,
 								Type:   sub.PushCfg.RetPol.PolicyType,
 							},
+							MattermostUrl:      sub.PushCfg.MattermostUrl,
+							MattermostUsername: sub.PushCfg.MattermostUsername,
+							MattermostChannel:  sub.PushCfg.MattermostChannel,
 						},
 					},
 				},

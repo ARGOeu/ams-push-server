@@ -25,6 +25,7 @@ func (suite *WorkerTestSuite) TestNew() {
 	s := senders.NewHttpSender("", "", &http.Client{})
 	sub := &amsPb.Subscription{
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: 300,
@@ -67,6 +68,7 @@ func (suite *WorkerTestSuite) TestStartStopCycle() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	sub := &amsPb.Subscription{
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,
@@ -141,6 +143,7 @@ func (suite *WorkerTestSuite) TestPush() {
 	sub := &amsPb.Subscription{
 		FullName: "sub1",
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,
@@ -175,6 +178,7 @@ func (suite *WorkerTestSuite) TestPush() {
 	sub2 := &amsPb.Subscription{
 		FullName: "sub1",
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 3,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,

@@ -47,6 +47,7 @@ func (suite *ServerTestSuite) TestActivateSubscriptionOK() {
 	}
 
 	pCfg := amsPb.PushConfig{
+		Type:         amsPb.PushType_HTTP_ENDPOINT,
 		PushEndpoint: "https://127.0.0.1:5000/receive_here",
 		RetryPolicy:  &retry,
 	}
@@ -260,6 +261,10 @@ func (suite *ServerTestSuite) TestLoadSubscriptions() {
 	// normal case, sub4 is push enabled and it should be activated successfully
 	_, sub4Found := ps.PushWorkers["/projects/push2/subscriptions/sub4"]
 	suite.True(sub4Found)
+
+	// normal case, sub5 is mattermost push enabled and it should be activated successfully
+	_, sub5Found := ps.PushWorkers["/projects/push2/subscriptions/sub5"]
+	suite.True(sub5Found)
 
 	// error case, the subscription should not have been activated
 	_, errorSubFound := ps.PushWorkers["/projects/push1/subscriptions/errorsub"]
