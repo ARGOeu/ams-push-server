@@ -27,7 +27,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 
 		p2 := Project{
 			Project:       "push2",
-			Subscriptions: []string{"sub3", "sub4"},
+			Subscriptions: []string{"sub3", "sub4", "sub5"},
 		}
 
 		userInfo := UserInfo{
@@ -65,6 +65,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 
 		pc := PushConfig{
 			Pend:                "example.com:9999",
+			Type:                HttpEndpointPushConfig,
 			AuthorizationHeader: authz,
 			RetPol:              rp,
 		}
@@ -72,6 +73,37 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		s := Subscription{
 			FullName:  "/projects/push1/subscriptions/sub1",
 			FullTopic: "/projects/push1/topics/t1",
+			PushCfg:   pc,
+		}
+
+		sb, _ := json.Marshal(s)
+
+		resp = &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewReader(sb)),
+			// Must be set to non-nil value or it panics
+			Header: header,
+		}
+
+	case "/v1/projects/push2/subscriptions/sub5":
+
+		rp := RetryPolicy{
+			PolicyType: "linear",
+			Period:     300,
+		}
+
+		pc := PushConfig{
+			Type:               MattermostPushConfig,
+			RetPol:             rp,
+			MattermostChannel:  "channel",
+			MattermostUsername: "mattermost",
+			MattermostUrl:      "webhook.com",
+		}
+
+		s := Subscription{
+			FullName:  "/projects/push2/subscriptions/sub5",
+			FullTopic: "/projects/push2/topics/t1",
 			PushCfg:   pc,
 		}
 
@@ -120,6 +152,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		}
 
 		pc := PushConfig{
+			Type:   HttpEndpointPushConfig,
 			Pend:   "example.com:9999",
 			RetPol: rp,
 		}

@@ -59,7 +59,7 @@ func (suite *UserTestSuite) TestGetUserByToken() {
 
 	p2 := Project{
 		Project:       "push2",
-		Subscriptions: []string{"sub3", "sub4"},
+		Subscriptions: []string{"sub3", "sub4", "sub5"},
 	}
 
 	expectedUserInfo := UserInfo{
