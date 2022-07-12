@@ -66,6 +66,7 @@ func (suite *SubscriptionTestSuite) TestGetSubscription() {
 		Pend:                "example.com:9999",
 		AuthorizationHeader: authz,
 		RetPol:              rp,
+		Base64Decode:        true,
 	}
 
 	expectedSub := Subscription{

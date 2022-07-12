@@ -68,6 +68,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 			Type:                HttpEndpointPushConfig,
 			AuthorizationHeader: authz,
 			RetPol:              rp,
+			Base64Decode:        true,
 		}
 
 		s := Subscription{
@@ -99,6 +100,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 			MattermostChannel:  "channel",
 			MattermostUsername: "mattermost",
 			MattermostUrl:      "webhook.com",
+			Base64Decode:       false,
 		}
 
 		s := Subscription{
