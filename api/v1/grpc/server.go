@@ -338,6 +338,7 @@ func (ps *PushService) loadSubscriptions() {
 							MattermostUrl:      sub.PushCfg.MattermostUrl,
 							MattermostUsername: sub.PushCfg.MattermostUsername,
 							MattermostChannel:  sub.PushCfg.MattermostChannel,
+							Base_64Decode:      sub.PushCfg.Base64Decode,
 						},
 					},
 				},

@@ -168,12 +168,34 @@ func (suite *WorkerTestSuite) TestPush() {
 		cancel:      cancel,
 	}
 
-	// no error - single message
+	// no error - single message - without decode
 	lw.push()
 	suite.Equal(1, len(c.AckMessages))
 	suite.Equal(1, len(c.GeneratedMessages))
+	suite.Equal("c29tZSBkYXRh", s.PushMessages[0].Msg.Data)
 	suite.Equal(1, len(s.PushMessages))
 	suite.Equal("Subscription sub1 is currently active", lw.Status())
+
+	//  with decode
+	sub.PushConfig.Base_64Decode = true
+	cD := new(consumers.MockConsumer)
+	cD.SubStatus = "normal_sub"
+	cD.AckStatus = "normal_ack"
+	sD := new(senders.MockSender)
+	lwDecode := worker{
+		sub:         sub,
+		consumer:    cD,
+		sender:      sD,
+		retryPolicy: rp,
+		ctx:         ctx,
+		cancel:      cancel,
+	}
+	lwDecode.push()
+	suite.Equal(1, len(cD.AckMessages))
+	suite.Equal(1, len(cD.GeneratedMessages))
+	suite.Equal("some data", sD.PushMessages[0].Msg.Data)
+	suite.Equal(1, len(sD.PushMessages))
+	suite.Equal("Subscription sub1 is currently active", lwDecode.Status())
 
 	sub2 := &amsPb.Subscription{
 		FullName: "sub1",

@@ -2,9 +2,11 @@ package push
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/consumers"
+	v1 "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"github.com/ARGOeu/ams-push-server/retrypolicies"
 	"github.com/ARGOeu/ams-push-server/senders"
 	log "github.com/sirupsen/logrus"
@@ -154,9 +156,37 @@ func (w *worker) push() {
 	pms := senders.PushMsgs{}
 
 	for _, rm := range rml.RecMsgs {
+
+		msgData := ""
+		// try to decode base64 payload of message
+		// fallback to original content of the message if it fails
+		if w.sub.PushConfig.Base_64Decode {
+			decodedMessageBytes, err := base64.StdEncoding.DecodeString(rm.Msg.Data)
+			if err != nil {
+				log.WithFields(
+					log.Fields{
+						"type":         "service_log",
+						"subscription": w.sub.FullName,
+						"message_id":   rm.Msg.ID,
+						"error":        err.Error(),
+					},
+				).Error("Could not decode message")
+				msgData = rm.Msg.Data
+			} else {
+				msgData = string(decodedMessageBytes)
+			}
+		} else {
+			msgData = rm.Msg.Data
+		}
+
 		msg := senders.PushMsg{
 			Sub: w.consumer.ResourceInfo(),
-			Msg: rm.Msg,
+			Msg: v1.Message{
+				ID:      rm.Msg.ID,
+				Attr:    rm.Msg.Attr,
+				Data:    msgData,
+				PubTime: rm.Msg.PubTime,
+			},
 		}
 
 		pms.Messages = append(pms.Messages, msg)

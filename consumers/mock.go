@@ -70,7 +70,7 @@ func (m *MockConsumer) Consume(ctx context.Context, numberOfMessages int64) (ams
 		rm := ams.ReceivedMessage{
 			AckID: fmt.Sprintf("ackid_%v", len(m.GeneratedMessages)),
 			Msg: ams.Message{
-				Data:    "some data",
+				Data:    "c29tZSBkYXRh", // 'some data' literal encoded in b64
 				ID:      fmt.Sprintf("id_%v", len(m.GeneratedMessages)),
 				PubTime: time.Now().UTC().Format(time.StampNano),
 			},

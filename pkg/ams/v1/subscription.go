@@ -32,6 +32,7 @@ type PushConfig struct {
 	MattermostUrl       string              `json:"mattermostUrl"`
 	MattermostUsername  string              `json:"mattermostUsername"`
 	MattermostChannel   string              `json:"mattermostChannel"`
+	Base64Decode        bool                `json:"base64Decode"`
 }
 
 // AuthorizationHeader holds an optional value to be supplied as an Authorization header to push requests
