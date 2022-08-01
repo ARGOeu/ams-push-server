@@ -1,12 +1,11 @@
 package grpc
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/config"
 	"github.com/ARGOeu/ams-push-server/consumers"
+	ams "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"github.com/ARGOeu/ams-push-server/push"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
@@ -15,7 +14,6 @@ import (
 	"google.golang.org/grpc/status"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"testing"
 )
 
@@ -49,6 +47,7 @@ func (suite *ServerTestSuite) TestActivateSubscriptionOK() {
 	}
 
 	pCfg := amsPb.PushConfig{
+		Type:         amsPb.PushType_HTTP_ENDPOINT,
 		PushEndpoint: "https://127.0.0.1:5000/receive_here",
 		RetryPolicy:  &retry,
 	}
@@ -240,88 +239,15 @@ func (suite *ServerTestSuite) TestNewGRPCServer() {
 	suite.IsType(&grpc.Server{}, srv)
 }
 
-func (suite *ServerTestSuite) TestGetPushWorkerUser() {
-
-	ps := NewPushService(config.NewMockConfig())
-	client := &http.Client{
-		Transport: new(MockRoundTripper),
-	}
-	ps.Client = client
-
-	u1, err1 := ps.getPushWorkerUser()
-
-	p1 := Project{
-		Project:       "push1",
-		Subscriptions: []string{"sub1", "errorsub"},
-	}
-
-	p2 := Project{
-		Project:       "push2",
-		Subscriptions: []string{"sub3", "sub4"},
-	}
-
-	expectedUSerInfo := UserInfo{
-		Name:     "worker",
-		Projects: []Project{p1, p2},
-	}
-
-	suite.Equal(expectedUSerInfo, u1)
-	suite.Nil(err1)
-
-	// error case
-	ps.Cfg.AmsToken = "errortoken"
-	u2, err2 := ps.getPushWorkerUser()
-	suite.Equal(UserInfo{}, u2)
-	suite.Equal("server internal error", err2.Error())
-}
-
-func (suite *ServerTestSuite) TestGetSubscription() {
-
-	ps := NewPushService(config.NewMockConfig())
-	client := &http.Client{
-		Transport: new(MockRoundTripper),
-	}
-	ps.Client = client
-
-	rp := RetryPolicy{
-		PolicyType: "linear",
-		Period:     300,
-	}
-
-	authz := AuthorizationHeader{
-		Value: "auth-header-1",
-	}
-
-	pc := PushConfig{
-		Pend:                "example.com:9999",
-		AuthorizationHeader: authz,
-		RetPol:              rp,
-	}
-
-	expectedSub := Subscription{
-		FullName:  "/projects/push1/subscriptions/sub1",
-		FullTopic: "/projects/push1/topics/t1",
-		PushCfg:   pc,
-	}
-
-	sub1, err1 := ps.getSubscription("/projects/push1/subscriptions/sub1")
-	suite.Equal(expectedSub, sub1)
-	suite.Nil(err1)
-
-	// error case
-	sub2, err2 := ps.getSubscription("/projects/push1/subscriptions/errorsub")
-	suite.Equal(Subscription{}, sub2)
-	suite.Equal("server internal error", err2.Error())
-
-}
-
 func (suite *ServerTestSuite) TestLoadSubscriptions() {
 
 	ps := NewPushService(config.NewMockConfig())
 	client := &http.Client{
-		Transport: new(MockRoundTripper),
+		Transport: new(ams.MockAmsRoundTripper),
 	}
 	ps.Client = client
+	amsClient := ams.NewClient("", "", "", 443, client)
+	ps.AmsClient = amsClient
 
 	ps.loadSubscriptions()
 
@@ -336,6 +262,10 @@ func (suite *ServerTestSuite) TestLoadSubscriptions() {
 	_, sub4Found := ps.PushWorkers["/projects/push2/subscriptions/sub4"]
 	suite.True(sub4Found)
 
+	// normal case, sub5 is mattermost push enabled and it should be activated successfully
+	_, sub5Found := ps.PushWorkers["/projects/push2/subscriptions/sub5"]
+	suite.True(sub5Found)
+
 	// error case, the subscription should not have been activated
 	_, errorSubFound := ps.PushWorkers["/projects/push1/subscriptions/errorsub"]
 	suite.False(errorSubFound)
@@ -348,151 +278,4 @@ func (suite *ServerTestSuite) TestLoadSubscriptions() {
 func TestServerTestSuite(t *testing.T) {
 	logrus.SetOutput(ioutil.Discard)
 	suite.Run(t, new(ServerTestSuite))
-}
-
-type MockRoundTripper struct{}
-
-func (m *MockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	var resp *http.Response
-
-	header := make(http.Header)
-	header.Set("Content-type", "application/json")
-
-	switch r.URL.Path {
-
-	case "/v1/users:byToken/sometoken":
-
-		p1 := Project{
-			Project:       "push1",
-			Subscriptions: []string{"sub1", "errorsub"},
-		}
-
-		p2 := Project{
-			Project:       "push2",
-			Subscriptions: []string{"sub3", "sub4"},
-		}
-
-		userInfo := UserInfo{
-			Name:     "worker",
-			Projects: []Project{p1, p2},
-		}
-
-		b, _ := json.Marshal(userInfo)
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(b)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-	case "/v1/users:byToken/errortoken":
-
-		resp = &http.Response{
-			StatusCode: 500,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("server internal error")),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/projects/push1/subscriptions/sub1":
-
-		rp := RetryPolicy{
-			PolicyType: "linear",
-			Period:     300,
-		}
-		authz := AuthorizationHeader{
-			Value: "auth-header-1",
-		}
-
-		pc := PushConfig{
-			Pend:                "example.com:9999",
-			AuthorizationHeader: authz,
-			RetPol:              rp,
-		}
-
-		s := Subscription{
-			FullName:  "/projects/push1/subscriptions/sub1",
-			FullTopic: "/projects/push1/topics/t1",
-			PushCfg:   pc,
-		}
-
-		sb, _ := json.Marshal(s)
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(sb)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/projects/push1/subscriptions/errorsub":
-
-		resp = &http.Response{
-			StatusCode: 500,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("server internal error")),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/projects/push2/subscriptions/sub3":
-
-		s := Subscription{
-			FullName:  "/projects/push2/subscriptions/sub3",
-			FullTopic: "/projects/push2/topics/t1",
-		}
-
-		sb, _ := json.Marshal(s)
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(sb)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	case "/v1/projects/push2/subscriptions/sub4":
-
-		rp := RetryPolicy{
-			PolicyType: "linear",
-			Period:     300,
-		}
-
-		pc := PushConfig{
-			Pend:   "example.com:9999",
-			RetPol: rp,
-		}
-
-		s := Subscription{
-			FullName:  "/projects/push2/subscriptions/sub4",
-			FullTopic: "/projects/push2/topics/t1",
-			PushCfg:   pc,
-		}
-
-		sb, _ := json.Marshal(s)
-
-		resp = &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(sb)),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	default:
-		resp = &http.Response{
-			StatusCode: 500,
-			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("unexpected outcome")),
-			// Must be set to non-nil value or it panics
-			Header: header,
-		}
-
-	}
-
-	return resp, nil
 }

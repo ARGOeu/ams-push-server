@@ -5,6 +5,7 @@ import (
 	"fmt"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/consumers"
+	ams "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"github.com/ARGOeu/ams-push-server/retrypolicies"
 	"github.com/ARGOeu/ams-push-server/senders"
 	"github.com/stretchr/testify/suite"
@@ -20,10 +21,11 @@ type WorkerTestSuite struct {
 // TestNew tests that the worker factory behaves properly
 func (suite *WorkerTestSuite) TestNew() {
 
-	c := consumers.NewAmsHttpConsumer("", "", "", &http.Client{})
+	c := consumers.NewAmsHttpConsumer("", &ams.Client{})
 	s := senders.NewHttpSender("", "", &http.Client{})
 	sub := &amsPb.Subscription{
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: 300,
@@ -66,6 +68,7 @@ func (suite *WorkerTestSuite) TestStartStopCycle() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	sub := &amsPb.Subscription{
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,
@@ -140,6 +143,7 @@ func (suite *WorkerTestSuite) TestPush() {
 	sub := &amsPb.Subscription{
 		FullName: "sub1",
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 1,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,
@@ -164,16 +168,39 @@ func (suite *WorkerTestSuite) TestPush() {
 		cancel:      cancel,
 	}
 
-	// no error - single message
+	// no error - single message - without decode
 	lw.push()
 	suite.Equal(1, len(c.AckMessages))
 	suite.Equal(1, len(c.GeneratedMessages))
+	suite.Equal("c29tZSBkYXRh", s.PushMessages[0].Msg.Data)
 	suite.Equal(1, len(s.PushMessages))
 	suite.Equal("Subscription sub1 is currently active", lw.Status())
+
+	//  with decode
+	sub.PushConfig.Base_64Decode = true
+	cD := new(consumers.MockConsumer)
+	cD.SubStatus = "normal_sub"
+	cD.AckStatus = "normal_ack"
+	sD := new(senders.MockSender)
+	lwDecode := worker{
+		sub:         sub,
+		consumer:    cD,
+		sender:      sD,
+		retryPolicy: rp,
+		ctx:         ctx,
+		cancel:      cancel,
+	}
+	lwDecode.push()
+	suite.Equal(1, len(cD.AckMessages))
+	suite.Equal(1, len(cD.GeneratedMessages))
+	suite.Equal("some data", sD.PushMessages[0].Msg.Data)
+	suite.Equal(1, len(sD.PushMessages))
+	suite.Equal("Subscription sub1 is currently active", lwDecode.Status())
 
 	sub2 := &amsPb.Subscription{
 		FullName: "sub1",
 		PushConfig: &amsPb.PushConfig{
+			Type:        amsPb.PushType_HTTP_ENDPOINT,
 			MaxMessages: 3,
 			RetryPolicy: &amsPb.RetryPolicy{
 				Period: rate,

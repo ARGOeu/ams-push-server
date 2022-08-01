@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
-	"github.com/ARGOeu/ams-push-server/consumers"
+	ams "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"net/http"
 )
 
@@ -14,6 +14,7 @@ type pushMessageFormat string
 
 const (
 	HttpSenderType        senderType        = "http-sender"
+	MattermostSenderType  senderType        = "mattermost"
 	SingleMessageFormat   pushMessageFormat = "single"
 	MultipleMessageFormat pushMessageFormat = "multi"
 )
@@ -27,20 +28,22 @@ type Sender interface {
 }
 
 // New acts as a sender factory, creates and returns a new sender based on the provided type
-func New(sType senderType, cfg amsPb.PushConfig, client *http.Client) (Sender, error) {
+func New(cfg amsPb.PushConfig, client *http.Client) (Sender, error) {
 
-	switch sType {
-	case HttpSenderType:
+	switch cfg.Type {
+	case amsPb.PushType_HTTP_ENDPOINT:
 		return NewHttpSender(cfg.PushEndpoint, cfg.AuthorizationHeader, client), nil
+	case amsPb.PushType_MATTERMOST:
+		return NewMattermostSender(cfg.MattermostUrl, cfg.MattermostUsername, cfg.MattermostChannel, client), nil
 	}
 
-	return nil, fmt.Errorf("sender %v not yet implemented", sType)
+	return nil, fmt.Errorf("sender %v not yet implemented", cfg.Type)
 }
 
 // PushMsg holds data to be send to a remote endpoint
 type PushMsg struct {
 	// the actual message
-	Msg consumers.Message `json:"message"`
+	Msg ams.Message `json:"message"`
 	// the source
 	Sub string `json:"subscription"`
 }

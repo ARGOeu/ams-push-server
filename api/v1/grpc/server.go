@@ -1,14 +1,13 @@
 package grpc
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	amsPb "github.com/ARGOeu/ams-push-server/api/v1/grpc/proto"
 	"github.com/ARGOeu/ams-push-server/config"
 	"github.com/ARGOeu/ams-push-server/consumers"
+	ams "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"github.com/ARGOeu/ams-push-server/push"
 	"github.com/ARGOeu/ams-push-server/senders"
 	"github.com/grpc-ecosystem/go-grpc-middleware"
@@ -36,6 +35,7 @@ const ServiceUnavailable = "The push service is currently unable to handle any r
 type PushService struct {
 	Cfg            *config.Config
 	Client         *http.Client
+	AmsClient      *ams.Client
 	PushWorkers    map[string]push.Worker
 	deactivateChan chan consumers.CancelableError
 	status         string
@@ -62,6 +62,7 @@ func NewPushService(cfg *config.Config) *PushService {
 	}
 
 	ps.Client = client
+	ps.AmsClient = ams.NewClient("https", ps.Cfg.AmsHost, ps.Cfg.AmsToken, ps.Cfg.AmsPort, client)
 
 	ps.deactivateChan = make(chan consumers.CancelableError)
 	go ps.handleDeactivateChannel()
@@ -136,16 +137,18 @@ func (ps *PushService) ActivateSubscription(ctx context.Context, r *amsPb.Activa
 		return nil, status.Errorf(codes.AlreadyExists, "Subscription %v is already activated", r.Subscription.FullName)
 	}
 
-	_, err := url.ParseRequestURI(r.Subscription.PushConfig.PushEndpoint)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid push endpoint, %v", err.Error())
+	if r.Subscription.PushConfig.Type == amsPb.PushType_HTTP_ENDPOINT {
+		_, err := url.ParseRequestURI(r.Subscription.PushConfig.PushEndpoint)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid push endpoint, %v", err.Error())
+		}
 	}
 
 	// choose a consumer
-	c, _ := consumers.New(consumers.AmsHttpConsumerType, r.Subscription.FullName, ps.Cfg, ps.Client)
+	c, _ := consumers.New(consumers.AmsHttpConsumerType, r.Subscription.FullName, ps.AmsClient)
 
 	// choose a sender
-	s, _ := senders.New(senders.HttpSenderType, *r.Subscription.PushConfig, ps.Client)
+	s, _ := senders.New(*r.Subscription.PushConfig, ps.Client)
 
 	worker, err := push.New(r.Subscription, c, s, ps.deactivateChan)
 	if err != nil {
@@ -240,16 +243,18 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 	return srv
 }
 
-// loadSubscriptions activates all the ams subscriptions that are push enabled and assigned to the current push server
+// loadSubscriptions activates all the ams subscriptions that are push enabled and assigned to the current push worker
 func (ps *PushService) loadSubscriptions() {
 
-	var userInfo UserInfo
+	var userInfo ams.UserInfo
 	var err error
 
 	userFound := false
 
+	// attempt to retrieve the push worker user
 	for !userFound {
-		userInfo, err = ps.getPushWorkerUser()
+		t1 := time.Now()
+		userInfo, err = ps.AmsClient.GetUserByToken(context.Background(), ps.Cfg.AmsToken)
 		if err != nil {
 			ps.status = "Could not retrieve push worker user"
 			log.WithFields(
@@ -261,6 +266,13 @@ func (ps *PushService) loadSubscriptions() {
 			continue
 		}
 		userFound = true
+		log.WithFields(
+			log.Fields{
+				"type":            "performance_log",
+				"user":            userInfo.Name,
+				"processing_time": time.Since(t1).String(),
+			},
+		).Info("Push worker user retrieved successfully")
 	}
 
 	ps.status = "ok"
@@ -271,7 +283,8 @@ func (ps *PushService) loadSubscriptions() {
 
 			fullSubName := fmt.Sprintf("/projects/%v/subscriptions/%v", project.Project, subName)
 
-			sub, err := ps.getSubscription(fullSubName)
+			t1 := time.Now()
+			sub, err := ps.AmsClient.GetSubscription(context.Background(), fullSubName)
 			if err != nil {
 				log.WithFields(
 					log.Fields{
@@ -283,7 +296,7 @@ func (ps *PushService) loadSubscriptions() {
 				continue
 			}
 
-			if sub.PushCfg == (PushConfig{}) {
+			if !sub.IsPushEnabled() {
 				log.WithFields(
 					log.Fields{
 						"type":         "system_log",
@@ -293,12 +306,28 @@ func (ps *PushService) loadSubscriptions() {
 				continue
 			}
 
+			log.WithFields(
+				log.Fields{
+					"type":            "performance_log",
+					"subscription":    sub.FullName,
+					"processing_time": time.Since(t1).String(),
+				},
+			).Info("Subscription retrieved successfully")
+
+			var pushType amsPb.PushType
+			if sub.PushCfg.Type == ams.HttpEndpointPushConfig {
+				pushType = amsPb.PushType_HTTP_ENDPOINT
+			} else {
+				pushType = amsPb.PushType_MATTERMOST
+			}
+
 			_, err = ps.ActivateSubscription(context.TODO(),
 				&amsPb.ActivateSubscriptionRequest{
 					Subscription: &amsPb.Subscription{
 						FullName:  sub.FullName,
 						FullTopic: sub.FullTopic,
 						PushConfig: &amsPb.PushConfig{
+							Type:                pushType,
 							PushEndpoint:        sub.PushCfg.Pend,
 							AuthorizationHeader: sub.PushCfg.AuthorizationHeader.Value,
 							MaxMessages:         sub.PushCfg.MaxMessages,
@@ -306,6 +335,10 @@ func (ps *PushService) loadSubscriptions() {
 								Period: sub.PushCfg.RetPol.Period,
 								Type:   sub.PushCfg.RetPol.PolicyType,
 							},
+							MattermostUrl:      sub.PushCfg.MattermostUrl,
+							MattermostUsername: sub.PushCfg.MattermostUsername,
+							MattermostChannel:  sub.PushCfg.MattermostChannel,
+							Base_64Decode:      sub.PushCfg.Base64Decode,
 						},
 					},
 				},
@@ -330,136 +363,4 @@ func (ps *PushService) loadSubscriptions() {
 			).Info("Subscription activated successfully")
 		}
 	}
-}
-
-// getPushWorkerUser uses the provided token to get the respective push worker user profile
-func (ps *PushService) getPushWorkerUser() (UserInfo, error) {
-
-	url := fmt.Sprintf("https://%v:%v/v1/users:byToken/%v?key=%v",
-		ps.Cfg.AmsHost, ps.Cfg.AmsPort, ps.Cfg.AmsToken, ps.Cfg.AmsToken)
-
-	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(nil))
-	if err != nil {
-		return UserInfo{}, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	t1 := time.Now()
-
-	resp, err := ps.Client.Do(req)
-	if err != nil {
-		return UserInfo{}, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		buf := bytes.Buffer{}
-		buf.ReadFrom(resp.Body)
-		return UserInfo{}, errors.New(buf.String())
-	}
-
-	userInfo := UserInfo{}
-
-	err = json.NewDecoder(resp.Body).Decode(&userInfo)
-	if err != nil {
-		return UserInfo{}, err
-	}
-
-	log.WithFields(
-		log.Fields{
-			"type":            "performance_log",
-			"user":            userInfo.Name,
-			"processing_time": time.Since(t1).String(),
-		},
-	).Info("Push worker user retrieved successfully")
-
-	return userInfo, nil
-}
-
-// getSubscription retrieves the detailed information for a specific subscription
-func (ps *PushService) getSubscription(fullSub string) (Subscription, error) {
-
-	url := fmt.Sprintf("https://%v:%v/v1%v?key=%v",
-		ps.Cfg.AmsHost, ps.Cfg.AmsPort, fullSub, ps.Cfg.AmsToken)
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-
-	if err != nil {
-		return Subscription{}, err
-	}
-
-	req.Header.Set("Content-type", "application/json")
-
-	t1 := time.Now()
-	resp, err := ps.Client.Do(req)
-
-	if err != nil {
-		return Subscription{}, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		buf := bytes.Buffer{}
-		buf.ReadFrom(resp.Body)
-		return Subscription{}, errors.New(buf.String())
-	}
-
-	sub := Subscription{}
-	err = json.NewDecoder(resp.Body).Decode(&sub)
-	if err != nil {
-		return Subscription{}, err
-	}
-
-	log.WithFields(
-		log.Fields{
-			"type":            "performance_log",
-			"subscription":    sub.FullName,
-			"processing_time": time.Since(t1).String(),
-		},
-	).Info("Subscription retrieved successfully")
-
-	return sub, nil
-}
-
-type UserInfo struct {
-	Name     string    `json:"name"`
-	Projects []Project `json:"projects"`
-}
-
-type Subscription struct {
-	FullName   string     `json:"name"`
-	FullTopic  string     `json:"topic"`
-	PushCfg    PushConfig `json:"pushConfig"`
-	PushStatus string     `json:"push_status"`
-}
-
-// PushConfig holds optional configuration for push operations
-type PushConfig struct {
-	Pend                string              `json:"pushEndpoint"`
-	AuthorizationHeader AuthorizationHeader `json:"authorization_header"`
-	MaxMessages         int64               `json:"maxMessages"`
-	RetPol              RetryPolicy         `json:"retryPolicy"`
-}
-
-// AuthorizationHeader holds an optional value to be supplied as an Authorization header to push requests
-type AuthorizationHeader struct {
-	Value string `json:"value"`
-}
-
-// RetryPolicy holds information on retry policies
-type RetryPolicy struct {
-	PolicyType string `json:"type,omitempty"`
-	Period     uint32 `json:"period,omitempty"`
-}
-
-type Projects struct {
-	Projects []Project `json:"projects"`
-}
-
-type Project struct {
-	Project       string   `json:"project"`
-	Subscriptions []string `json:"subscriptions"`
 }
