@@ -53,6 +53,7 @@ go clean
 %defattr(0644,ams-push-server,ams-push-server)
 %attr(0750,ams-push-server,ams-push-server) /var/www/ams-push-server
 %attr(0755,ams-push-server,ams-push-server) /var/www/ams-push-server/ams-push-server
+%caps(cap_net_bind_service=+ep) /var/www/ams-push-server/ams-push-server
 %config(noreplace) %attr(0644,ams-push-server,ams-push-server) /etc/ams-push-server/conf.d/ams-push-server-config.json
 %attr(0644,root,root) /usr/lib/systemd/system/ams-push-server.service
 
