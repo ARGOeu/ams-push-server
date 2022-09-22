@@ -1,7 +1,7 @@
 # Ams Push Server
 
-devel: [![Build Status](https://jenkins.einfra.grnet.gr/buildStatus/icon?job=ARGO%2Fams-push-server%2Fdevel)](https://jenkins.einfra.grnet.gr/job/ARGO/job/ams-push-server/job/devel/)
-master: [![Build Status](https://jenkins.einfra.grnet.gr/buildStatus/icon?job=ARGO%2Fams-push-server%2Fmaster)](https://jenkins.einfra.grnet.gr/job/ARGO/job/ams-push-server/job/master/)
+[![Build Status](https://jenkins.einfra.grnet.gr/buildStatus/icon?job=ARGO%2Fams-push-server%2Fmaster&style=flat-square&color=darkturquoise&subject=build-master)](https://jenkins.einfra.grnet.gr/job/ARGO/job/ams-push-server/job/master/) 
+[![Build Status](https://jenkins.einfra.grnet.gr/buildStatus/icon?job=ARGO%2Fams-push-server%2Fdevel&style=flat-square&subject=build-devel)](https://jenkins.einfra.grnet.gr/job/ARGO/job/ams-push-server/job/devel/)
 
 The ams push server is a component that handles the push functionality for the respective
 push enabled subscriptions in the [argo-messaging-service.](https://github.com/ARGOeu/argo-messaging-service)
@@ -27,17 +27,11 @@ Before you start, you need to issue a valid certificate.
 
       `go get github.com/ARGOeu/ams-push-server`
 
-4. Get dependencies(If you plan on contributing to the project else skip this step):
-
-   Ams-push-server uses the dep tool for dependency handling.
-
-    - Install the dep tool. You can find instructions depending on your platform at [Dep](https://github.com/golang/dep).
-
-5. To build the service use the following command:
+4. To build the service use the following command:
 
       `go build`
 
-6. To run the service use the following command:
+5. To run the service use the following command:
 
       `./ams-push-server` (This assumes that there is a valid configuration file at
        `/etc/ams-push-server/conf.d/ams-push-server-config.json`).
@@ -46,7 +40,7 @@ Before you start, you need to issue a valid certificate.
 
       `./ams-push-server --config /path/to/a/json/config/file`
 
-7. To run the unit-tests:
+6. To run the unit-tests:
 
     Inside the project's folder issue the command:
 
