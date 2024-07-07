@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -122,7 +122,7 @@ func (suite *ClientTestSuite) TestAmsRequestExecute() {
 }
 
 func TestClientTestSuite(t *testing.T) {
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	suite.Run(t, new(ClientTestSuite))
 }
 
@@ -142,7 +142,7 @@ func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	header := make(http.Header)
 	header.Set("Content-type", "application/json")
 
-	m.requestBody, _ = ioutil.ReadAll(r.Body)
+	m.requestBody, _ = io.ReadAll(r.Body)
 	m.header = r.Header.Clone()
 
 	switch r.URL.Path {
@@ -152,7 +152,7 @@ func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("text")),
+			Body: io.NopCloser(strings.NewReader("text")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -162,7 +162,7 @@ func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 		resp = &http.Response{
 			StatusCode: 100,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("error-100")),
+			Body: io.NopCloser(strings.NewReader("error-100")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -172,7 +172,7 @@ func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 		resp = &http.Response{
 			StatusCode: 300,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("error-300")),
+			Body: io.NopCloser(strings.NewReader("error-300")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}

@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"io"
-	"io/ioutil"
 	"log/syslog"
 	"os"
 	"path/filepath"
@@ -181,11 +180,10 @@ func (cfg *Config) loadTLSConfig() error {
 	}
 
 	tlsConfig := &tls.Config{
-		ClientAuth:               cfg.GetClientAuthType(),
-		Certificates:             []tls.Certificate{c},
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		ClientCAs:                cfg.loadCAs(),
+		ClientAuth:   cfg.GetClientAuthType(),
+		Certificates: []tls.Certificate{c},
+		MinVersion:   tls.VersionTLS12,
+		ClientCAs:    cfg.loadCAs(),
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -241,7 +239,7 @@ func (cfg *Config) loadCAs() *x509.CertPool {
 			return err
 		}
 		if ok, _ := filepath.Match(pattern, info.Name()); ok {
-			bytes, err := ioutil.ReadFile(filepath.Join(cfg.CertificateAuthoritiesDir, info.Name()))
+			bytes, err := os.ReadFile(filepath.Join(cfg.CertificateAuthoritiesDir, info.Name()))
 			if err != nil {
 				return err
 			}

@@ -10,7 +10,6 @@ import (
 	ams "github.com/ARGOeu/ams-push-server/pkg/ams/v1"
 	"github.com/ARGOeu/ams-push-server/push"
 	"github.com/ARGOeu/ams-push-server/senders"
-	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/pkg/errors"
@@ -220,7 +219,7 @@ func NewGRPCServer(cfg *config.Config) *grpc.Server {
 	s := NewPushService(cfg)
 
 	srvOptions := []grpc.ServerOption{
-		grpc_middleware.WithUnaryServerChain(
+		grpc.ChainUnaryInterceptor(
 			grpc_ctxtags.UnaryServerInterceptor(),
 			grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(grpcLogger), logOpts...),
 			AuthInterceptor(cfg.ACL, cfg.TLSEnabled),

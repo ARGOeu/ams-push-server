@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -95,7 +95,7 @@ func (s *MattermostSender) Send(ctx context.Context, msgs PushMsgs, format pushM
 
 		mattermostError := MattermostError{}
 
-		errorB, err := ioutil.ReadAll(resp.Body)
+		errorB, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		} else {

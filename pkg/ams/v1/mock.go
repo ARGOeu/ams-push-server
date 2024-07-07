@@ -3,7 +3,7 @@ package v1
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -40,7 +40,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(b)),
+			Body: io.NopCloser(bytes.NewReader(b)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -49,7 +49,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 500,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("server internal error")),
+			Body: io.NopCloser(strings.NewReader("server internal error")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -82,7 +82,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(sb)),
+			Body: io.NopCloser(bytes.NewReader(sb)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -114,7 +114,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(sb)),
+			Body: io.NopCloser(bytes.NewReader(sb)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -124,7 +124,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 500,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("server internal error")),
+			Body: io.NopCloser(strings.NewReader("server internal error")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -141,7 +141,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(sb)),
+			Body: io.NopCloser(bytes.NewReader(sb)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -170,7 +170,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(sb)),
+			Body: io.NopCloser(bytes.NewReader(sb)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -179,7 +179,7 @@ func (m *MockAmsRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		resp = &http.Response{
 			StatusCode: 500,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("unexpected outcome")),
+			Body: io.NopCloser(strings.NewReader("unexpected outcome")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -200,7 +200,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 	header := make(http.Header)
 	header.Set("Content-type", "application/json")
 
-	m.RequestBodyBytes, _ = ioutil.ReadAll(r.Body)
+	m.RequestBodyBytes, _ = io.ReadAll(r.Body)
 
 	switch r.URL.Path {
 
@@ -223,7 +223,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(b)),
+			Body: io.NopCloser(bytes.NewReader(b)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -239,7 +239,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewReader(b)),
+			Body: io.NopCloser(bytes.NewReader(b)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -257,7 +257,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 500,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
+			Body: io.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -275,7 +275,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 404,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
+			Body: io.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -293,7 +293,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 404,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
+			Body: io.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -303,7 +303,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(`{}`)),
+			Body: io.NopCloser(strings.NewReader(`{}`)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -321,7 +321,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 408,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
+			Body: io.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -331,7 +331,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("")),
+			Body: io.NopCloser(strings.NewReader("")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -349,7 +349,7 @@ func (m *MockConsumeRoundTripper) RoundTrip(r *http.Request) (*http.Response, er
 		resp = &http.Response{
 			StatusCode: 500,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
+			Body: io.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}

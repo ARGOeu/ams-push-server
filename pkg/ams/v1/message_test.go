@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 )
@@ -80,6 +80,6 @@ func (suite *MessageTestSuite) TestAck() {
 }
 
 func TestMessageTestSuite(t *testing.T) {
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	suite.Run(t, new(MessageTestSuite))
 }

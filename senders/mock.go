@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/pkg/errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -48,7 +48,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 	header := make(http.Header)
 	header.Set("Content-type", ApplicationJson)
 
-	m.RequestBodyBytes, _ = ioutil.ReadAll(r.Body)
+	m.RequestBodyBytes, _ = io.ReadAll(r.Body)
 
 	switch r.URL.Path {
 
@@ -57,7 +57,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 			resp = &http.Response{
 				StatusCode: 200,
 				// Send response to be tested
-				Body: ioutil.NopCloser(strings.NewReader("")),
+				Body: io.NopCloser(strings.NewReader("")),
 				// Must be set to non-nil value or it panics
 				Header: header,
 			}
@@ -67,7 +67,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 			resp = &http.Response{
 				StatusCode: 201,
 				// Send response to be tested
-				Body: ioutil.NopCloser(strings.NewReader("")),
+				Body: io.NopCloser(strings.NewReader("")),
 				// Must be set to non-nil value or it panics
 				Header: header,
 			}
@@ -77,7 +77,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 			resp = &http.Response{
 				StatusCode: 204,
 				// Send response to be tested
-				Body: ioutil.NopCloser(strings.NewReader("")),
+				Body: io.NopCloser(strings.NewReader("")),
 				// Must be set to non-nil value or it panics
 				Header: header,
 			}
@@ -87,7 +87,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 			resp = &http.Response{
 				StatusCode: 102,
 				// Send response to be tested
-				Body: ioutil.NopCloser(strings.NewReader("")),
+				Body: io.NopCloser(strings.NewReader("")),
 				// Must be set to non-nil value or it panics
 				Header: header,
 			}
@@ -105,7 +105,7 @@ func (m *MockSenderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		resp = &http.Response{
 			StatusCode: 500,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
+			Body: io.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -126,7 +126,7 @@ func (m *MockMattermostRoundTripper) RoundTrip(r *http.Request) (*http.Response,
 	header := make(http.Header)
 	header.Set("Content-type", ApplicationJson)
 
-	m.RequestBodyBytes, _ = ioutil.ReadAll(r.Body)
+	m.RequestBodyBytes, _ = io.ReadAll(r.Body)
 	switch r.URL.Path {
 
 	case "/webhook":
@@ -136,7 +136,7 @@ func (m *MockMattermostRoundTripper) RoundTrip(r *http.Request) (*http.Response,
 		resp = &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("ok")),
+			Body: io.NopCloser(strings.NewReader("ok")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -153,7 +153,7 @@ func (m *MockMattermostRoundTripper) RoundTrip(r *http.Request) (*http.Response,
 		resp = &http.Response{
 			StatusCode: 404,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader(err)),
+			Body: io.NopCloser(strings.NewReader(err)),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
@@ -162,7 +162,7 @@ func (m *MockMattermostRoundTripper) RoundTrip(r *http.Request) (*http.Response,
 		resp = &http.Response{
 			StatusCode: 500,
 			// Send response to be tested
-			Body: ioutil.NopCloser(strings.NewReader("generic-error")),
+			Body: io.NopCloser(strings.NewReader("generic-error")),
 			// Must be set to non-nil value or it panics
 			Header: header,
 		}
