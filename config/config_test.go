@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 )
@@ -167,6 +167,6 @@ func (suite *ConfigTestSuite) TestGetClientAuthType() {
 }
 
 func TestConfigTestSuite(t *testing.T) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	suite.Run(t, new(ConfigTestSuite))
 }

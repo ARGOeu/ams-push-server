@@ -7,8 +7,8 @@ import (
 	amsgRPC "github.com/ARGOeu/ams-push-server/api/v1/grpc"
 	"github.com/ARGOeu/ams-push-server/config"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	"net"
+	"os"
 )
 
 func init() {
@@ -22,7 +22,7 @@ func main() {
 	cfgPath := flag.String("config", "/etc/ams-push-server/conf.d/ams-push-server-config.json", "Path for the required configuration file.")
 	flag.Parse()
 
-	bCfg, err := ioutil.ReadFile(*cfgPath)
+	bCfg, err := os.ReadFile(*cfgPath)
 	if err != nil {
 		log.WithFields(
 			log.Fields{

@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 )
@@ -276,6 +276,6 @@ func (suite *ServerTestSuite) TestLoadSubscriptions() {
 }
 
 func TestServerTestSuite(t *testing.T) {
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	suite.Run(t, new(ServerTestSuite))
 }

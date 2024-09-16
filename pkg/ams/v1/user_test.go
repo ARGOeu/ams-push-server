@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 )
@@ -77,6 +77,6 @@ func (suite *UserTestSuite) TestGetUserByToken() {
 }
 
 func TestUserServiceTestSuite(t *testing.T) {
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	suite.Run(t, new(UserTestSuite))
 }
