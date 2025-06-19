@@ -20,10 +20,10 @@ func (suite *ConfigTestSuite) TestValidateRequired() {
 	e1 := cfg.validateRequired()
 
 	// test the case where one the required field is not set
-	suite.Equal("Empty value for field service_port", e1.Error())
+	suite.Equal("Empty value for field bind_port", e1.Error())
 
 	cfg2 := Config{
-		ServicePort:               9000,
+		BindPort:                  9000,
 		Certificate:               "/path/cert.pem",
 		CertificateKey:            "/path/certkey.pem",
 		CertificateAuthoritiesDir: "/path/to/cas",
@@ -39,7 +39,7 @@ func (suite *ConfigTestSuite) TestValidateRequired() {
 		SyslogEnabled:             true,
 	}
 
-	// test the case where where everything is set properly
+	// test the case where everything is set properly
 	e2 := cfg2.validateRequired()
 	suite.Nil(e2)
 }
@@ -48,7 +48,8 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 
 	testCfg := `
 {
-  "service_port": 9000,
+  "bind_ip": "192.168.3.0",
+  "bind_port": 9000,
   "certificate": "/path/cert.pem",
   "certificate_key": "/path/certkey.pem",
   "certificate_authorities_dir": "/path/to/cas",
@@ -68,7 +69,8 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 	e1 := cfg.LoadFromJson(strings.NewReader(testCfg))
 
 	// test the normal case
-	suite.Equal(9000, cfg.ServicePort)
+	suite.Equal("192.168.3.0", cfg.BindIp)
+	suite.Equal(9000, cfg.BindPort)
 	suite.Equal("/path/cert.pem", cfg.Certificate)
 	suite.Equal("/path/certkey.pem", cfg.CertificateKey)
 	suite.Equal("/path/to/cas", cfg.CertificateAuthoritiesDir)
@@ -87,7 +89,7 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 
 	testCfg2 := `
 {
-  "service_port": 9000,
+  "bind_port": 9000,
   "certificate": "/path/cert.pem",
   "certificate_key": "/path/certkey.pem",
   "certificate_authorities_dir": "/path/to/cas",
@@ -106,7 +108,7 @@ func (suite *ConfigTestSuite) TestLoadFromJson() {
 
 	testCfg3 := `
 {
-  "service_port": 9000,
+  "bind_port": 9000,
   "certificate": "/path/cert.pem",
   "certificate_key": "/path/certkey.pem",
   "certificate_authorities_dir": "/path/to/cas",

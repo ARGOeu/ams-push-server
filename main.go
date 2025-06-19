@@ -47,7 +47,7 @@ func main() {
 
 	log.SetLevel(cfg.GetLogLevel())
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", cfg.ServicePort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%v:%v", cfg.BindIp, cfg.BindPort))
 	if err != nil {
 		log.WithFields(
 			log.Fields{

@@ -2,29 +2,29 @@ syntax = "proto3";
 
 // Manages subscriptions.
 service PushService {
-    // Activates a subscription in order for the service to start handling the push functionality
-    rpc ActivateSubscription(ActivateSubscriptionRequest) returns (ActivateSubscriptionResponse) {}
+  // Activates a subscription in order for the service to start handling the push functionality
+  rpc ActivateSubscription(ActivateSubscriptionRequest) returns (ActivateSubscriptionResponse) {}
 
-    //  Deactivates a subscription in order for the service to stop handling the push functionality
-    rpc DeactivateSubscription(DeactivateSubscriptionRequest) returns (DeactivateSubscriptionResponse) {}
+  //  Deactivates a subscription in order for the service to stop handling the push functionality
+  rpc DeactivateSubscription(DeactivateSubscriptionRequest) returns (DeactivateSubscriptionResponse) {}
 
-    //  Status returns the current state of the service
-    rpc Status(StatusRequest) returns (StatusResponse) {}
+  //  Status returns the current state of the service
+  rpc Status(StatusRequest) returns (StatusResponse) {}
 
-    // SubscriptionStatus returns the status of the worker that handles the respective subscription
-    rpc SubscriptionStatus(SubscriptionStatusRequest) returns (SubscriptionStatusResponse) {}
+  // SubscriptionStatus returns the status of the worker that handles the respective subscription
+  rpc SubscriptionStatus(SubscriptionStatusRequest) returns (SubscriptionStatusResponse) {}
 }
 
 // Empty wrapper for status request call
 message SubscriptionStatusRequest {
-    // Required. The full resource name of the subscrption.
-    string full_name = 1;
+  // Required. The full resource name of the subscrption.
+  string full_name = 1;
 }
 
 // Empty wrapper for status response call
 message SubscriptionStatusResponse {
-    // Required. The full resource name of the subscrption.
-    string status = 1;
+  // Required. The full resource name of the subscrption.
+  string status = 1;
 }
 
 // Empty wrapper for status request call
@@ -35,73 +35,73 @@ message StatusResponse {}
 
 // Wrapper for subscription
 message DeactivateSubscriptionResponse {
-    // Message response
-    string message = 1;
+  // Message response
+  string message = 1;
 }
 
 // Contains which subscription to deactivate
 message DeactivateSubscriptionRequest {
-    // Required. The full resource name of the subscrption.
-    string full_name = 1;
+  // Required. The full resource name of the subscrption.
+  string full_name = 1;
 }
 
 // Wrapper for subscription
 message ActivateSubscriptionResponse {
-    // Message response
-    string message = 1;
+  // Message response
+  string message = 1;
 }
 
 // Wrapper for subscription.
 message ActivateSubscriptionRequest {
-    // Required. A subscription.
-    Subscription subscription = 1;
+  // Required. A subscription.
+  Subscription subscription = 1;
 }
 
 // Subscription holds informaton related to how the push functionality should operate.
 message Subscription {
-    // Required. The full resource name of the subscription.
-    string full_name = 1;
-    // The full topic name of the topic that the subscription is associated.
-    string full_topic = 2;
-    // Required. Information regarding the push functionality.
-    PushConfig push_config = 4;
+  // Required. The full resource name of the subscription.
+  string full_name = 1;
+  // The full topic name of the topic that the subscription is associated.
+  string full_topic = 2;
+  // Required. Information regarding the push functionality.
+  PushConfig push_config = 4;
 }
 
 // PushConfig holds information on how a push subscription functions.
 message PushConfig {
-    // Required. An https endpoint to where the messages will be pushed.
-    string push_endpoint = 1;
-    // Defaults to 1. How many messages should the push server consume and sent at once.
-    int64 max_messages = 3;
-    // Required. Retry policy.
-    RetryPolicy retry_policy = 2;
-    // Required. Authorization header that the sent messages should include into the request
-    string authorization_header = 4;
-    // Required. Defines the type of the destination the data will be sent to.
-    // Can be either http_endpoint or mattermost
-    PushType type = 5 ;
-    // Mattermost webhook url
-    string mattermost_url = 6;
-    // Mattermost username that the messages will be displayed under
-    string mattermost_username = 7;
-    // Mattermost channel that the messages will be delivered to
-    string mattermost_channel = 8;
-    // Indicates whether or not the payload should be decoded before being pushed to any remote destination
-    bool base_64_decode = 9;
+  // Required. An https endpoint to where the messages will be pushed.
+  string push_endpoint = 1;
+  // Defaults to 1. How many messages should the push server consume and sent at once.
+  int64 max_messages = 3;
+  // Required. Retry policy.
+  RetryPolicy retry_policy = 2;
+  // Required. Authorization header that the sent messages should include into the request
+  string authorization_header = 4;
+  // Required. Defines the type of the destination the data will be sent to.
+  // Can be either http_endpoint or mattermost
+  PushType type = 5 ;
+  // Mattermost webhook url
+  string mattermost_url = 6;
+  // Mattermost username that the messages will be displayed under
+  string mattermost_username = 7;
+  // Mattermost channel that the messages will be delivered to
+  string mattermost_channel = 8;
+  // Indicates whether or not the payload should be decoded before being pushed to any remote destination
+  bool base_64_decode = 9;
 }
 
 // RetryPolicy holds information regarding the retry policy.
 message RetryPolicy {
-    // Required. Type of the retry policy used (Only linear policy supported).
-    string type = 1;
-    // Required. Retry period in milliseconds.
-    uint32 period = 2;
+  // Required. Type of the retry policy used (Only linear policy supported).
+  string type = 1;
+  // Required. Retry period in milliseconds.
+  uint32 period = 2;
 }
 
 // PushType declares what kind of push configuration info a subscription will hold
 enum PushType {
-    // HTTP_ENDPOINT refers to subscriptions that push messages to remote http endpoints
-    HTTP_ENDPOINT = 0;
-    // MATTERMOST refers to subscriptions that push messages to mattermost webhooks
-    MATTERMOST  = 1;
+  // HTTP_ENDPOINT refers to subscriptions that push messages to remote http endpoints
+  HTTP_ENDPOINT = 0;
+  // MATTERMOST refers to subscriptions that push messages to mattermost webhooks
+  MATTERMOST = 1;
 }

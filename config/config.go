@@ -17,8 +17,10 @@ import (
 
 // Config contains all the needed information for the server to function properly
 type Config struct {
+	// Which ip to bind to
+	BindIp string `json:"bind_ip"`
 	// Which port to bind to
-	ServicePort int `json:"service_port" required:"true"`
+	BindPort int `json:"bind_port" required:"true"`
 	// Certificate file in order to enable TLS
 	Certificate string `json:"certificate" required:"true"`
 	// Certificate's private key
@@ -31,9 +33,9 @@ type Config struct {
 	AmsHost string `json:"ams_host" required:"true"`
 	// Ams port
 	AmsPort int `json:"ams_port" required:"true"`
-	// Whether or not any http client spawn inside  the service should accept to talk to non https connections
+	// Whether any http client spawn inside  the service should accept to talk to non https connections
 	VerifySSL bool `json:"verify_ssl"`
-	// whether or not the service will start with tls enabled
+	// whether the service will start with tls enabled
 	TLSEnabled bool `json:"tls_enabled"`
 	// Trust incoming certificates signed from unknown CAs
 	TrustUnknownCAs bool `json:"trust_unknown_cas"`
