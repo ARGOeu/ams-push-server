@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 )
@@ -96,6 +96,6 @@ func (suite *HttpSenderTestSuite) TestDestination() {
 }
 
 func TestHttpSenderTestSuite(t *testing.T) {
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	suite.Run(t, new(HttpSenderTestSuite))
 }

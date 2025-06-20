@@ -1,7 +1,7 @@
 pipeline {
     agent { 
         docker { 
-            image 'argo.registry:5000/epel-7-mgo1.14'
+            image 'argo.registry:5000/epel-7-go1.21'
             args '-u jenkins:jenkins'
         }
     }
@@ -33,10 +33,6 @@ pipeline {
             steps {
                 echo 'Test & Coverage...'
                 sh """
-                mkdir /home/jenkins/mongo_data
-                mkdir /home/jenkins/mongo_log
-                mkdir /home/jenkins/mongo_run
-                mongod --dbpath /home/jenkins/mongo_data --logpath /home/jenkins/mongo_log/mongo.log --pidfilepath /home/jenkins/mongo_run/mongo.pid --fork
                 cd ${WORKSPACE}/go/src/github.com/ARGOeu/${PROJECT_DIR}
                 gocov test -p 1 \$(go list ./... | grep -v /vendor/) | gocov-xml > ${WORKSPACE}/coverage.xml
                 go test -p 1 \$(go list ./... | grep -v /vendor/) -v=1 | go-junit-report > ${WORKSPACE}/junit.xml
