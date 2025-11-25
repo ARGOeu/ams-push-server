@@ -41,8 +41,9 @@ pipeline {
                 gocover-cobertura < coverage.out > ${WORKSPACE}/coverage.xml
                 """
                 junit '**/junit.xml'
-                cobertura coberturaReportFile: '**/coverage.xml'
-
+                publishCoverage adapters: [
+                    coberturaAdapter('**/coverage.xml')
+                ]
             }
         }
         stage('Package') {
